@@ -1,0 +1,1315 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Gothic Remake Lockpick Solver - Solve Lockpicking Puzzles Online</title>
+  <meta name="description" content="Free Gothic Remake lockpick solver. Solve lockpicking puzzles instantly by entering plate positions and interactions. Supports 1-7 plate locks." />
+  <meta name="theme-color" content="#130e0a" />
+
+  <!-- Open Graph / social preview -->
+  <meta property="og:title" content="Gothic Remake Lockpick Solver" />
+  <meta property="og:description" content="Solve Gothic Remake lockpicking puzzles instantly. Supports 1-7 plate locks." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://gothic-remake-lockbreaker.com/" />
+  <meta property="og:image" content="https://gothic-remake-lockbreaker.com/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Gothic Remake Lockpick Solver" />
+  <meta name="twitter:description" content="Solve Gothic Remake lockpicking puzzles instantly. Supports 1-7 plate locks." />
+  <meta name="twitter:image" content="https://gothic-remake-lockbreaker.com/og-image.png" />
+
+  <!-- Inline SVG favicon -->
+  <link rel="icon" href='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E%3Crect width="64" height="64" rx="14" fill="%23130e0a"/%3E%3Ctext x="50%25" y="54%25" dominant-baseline="middle" text-anchor="middle" font-size="38"%3E%F0%9F%94%93%3C/text%3E%3C/svg%3E' />
+
+  <style>
+    :root {
+      --bg: #0e0b08;
+      --panel: #1a1410;
+      --panel-2: #241b15;
+      --text: #f3e2c7;
+      --muted: #b59b78;
+      --accent: #d99a39;
+      --accent-2: #ffd073;
+      --danger: #d76b55;
+      --ok: #84d27a;
+      --border: #3b2a1e;
+      --shadow: rgba(0,0,0,.35);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(217,154,57,.18), transparent 38rem),
+        linear-gradient(180deg, #130e0a, var(--bg));
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    header {
+      padding: 30px 16px 16px;
+      text-align: center;
+    }
+
+    .logo {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      letter-spacing: .4px;
+      color: var(--accent-2);
+      font-size: clamp(2rem, 7vw, 4rem);
+      line-height: .98;
+      text-shadow: 0 5px 18px rgba(0,0,0,.6);
+    }
+
+    .subtitle {
+      max-width: 820px;
+      margin: 14px auto 0;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .header-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .pill-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      border: 1px solid var(--border);
+      background: rgba(36,27,21,.8);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 800;
+      font-size: .92rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,.22);
+    }
+
+    main {
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 12px 14px 42px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(36,27,21,.96), rgba(26,20,16,.96));
+      border: 1px solid var(--border);
+      box-shadow: 0 10px 30px var(--shadow);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+      color: var(--accent-2);
+    }
+
+    .top-controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: .92rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    input, select, button {
+      font: inherit;
+    }
+
+    input, select {
+      width: 100%;
+      background: #100c09;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    button, .button {
+      border: 0;
+      border-radius: 12px;
+      padding: 11px 14px;
+      color: #140d06;
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #7c4a14;
+      transition: transform .05s ease, filter .15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    button:active, .button:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #7c4a14;
+    }
+
+    button.secondary, .button.secondary {
+      color: var(--text);
+      background: #2e2219;
+      border: 1px solid var(--border);
+      box-shadow: none;
+      font-weight: 700;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
+    .plates {
+      display: grid;
+      gap: 10px;
+    }
+
+    .plate-row {
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      background: rgba(16,12,9,.75);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .plate-name {
+      font-weight: 900;
+      color: var(--accent-2);
+    }
+
+    .position-buttons {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0,1fr));
+      gap: 5px;
+    }
+
+    .pos-btn {
+      padding: 9px 0;
+      background: #2b2119;
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      font-weight: 800;
+    }
+
+    .pos-btn.active {
+      background: linear-gradient(180deg, var(--accent-2), var(--accent));
+      color: #140d06;
+      border-color: var(--accent);
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: .88rem;
+      line-height: 1.45;
+      margin: 8px 0 0;
+    }
+
+    .matrix-wrap {
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    table {
+      width: 100%;
+      min-width: auto;
+      border-collapse: separate;
+      border-spacing: 4px;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: .76rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    th:first-child {
+      width: 50px;
+      background: rgba(217,154,57,.12);
+      border: 1px solid rgba(217,154,57,.25);
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-weight: 800;
+      color: var(--accent-2);
+    }
+
+    td, th {
+      text-align: center;
+      vertical-align: middle;
+      padding: 0;
+    }
+
+    .relation {
+      display: inline-block;
+      min-width: 40px;
+      padding: 5px 2px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #17110d;
+      color: var(--muted);
+      font-weight: 800;
+      box-shadow: none;
+      font-size: .71rem;
+    }
+
+    .relation.same {
+      background: rgba(132,210,122,.14);
+      color: var(--ok);
+      border-color: rgba(132,210,122,.45);
+    }
+
+    .relation.opposite {
+      background: rgba(215,107,85,.14);
+      color: var(--danger);
+      border-color: rgba(215,107,85,.45);
+    }
+
+    .relation.disabled {
+      opacity: .25;
+      cursor: not-allowed;
+    }
+
+    .solve-options {
+      margin-bottom: 12px;
+    }
+
+    .solve-options .hint {
+      margin-top: 6px;
+    }
+
+    .actions {
+      position: sticky;
+      bottom: 0;
+      z-index: 5;
+      padding: 12px 0 0;
+      background: linear-gradient(180deg, transparent, var(--bg) 35%);
+    }
+
+    .solve-btn {
+      width: 100%;
+      font-size: 1.1rem;
+      padding: 15px;
+    }
+
+    .result {
+      white-space: pre-wrap;
+      background: #100c09;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      min-height: 90px;
+      line-height: 1.45;
+    }
+
+    .success { color: var(--ok); font-weight: 800; }
+    .error { color: var(--danger); font-weight: 800; }
+    .small-note { color: var(--muted); font-size: .85rem; margin-top: 8px; }
+
+    .support-card {
+      text-align: center;
+      background:
+        radial-gradient(circle at top, rgba(255,208,115,.12), transparent 24rem),
+        linear-gradient(180deg, rgba(36,27,21,.96), rgba(26,20,16,.96));
+    }
+
+    .support-card p {
+      color: var(--muted);
+      margin: 8px auto 0;
+      max-width: 720px;
+      line-height: 1.5;
+    }
+
+    .star-count {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--accent-2);
+      font-weight: 900;
+      margin-top: 10px;
+    }
+
+    .faq-card h3 {
+      margin: 14px 0 6px;
+      color: var(--text);
+      font-size: 1rem;
+    }
+
+    .faq-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: .94rem;
+    }
+
+    .disclaimer {
+      font-size: .82rem;
+      color: var(--muted);
+      line-height: 1.45;
+      text-align: center;
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: .85rem;
+      margin-top: 8px;
+    }
+
+
+    @media (max-width: 600px) {
+      html, body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      header {
+        padding: 22px 10px 12px;
+      }
+
+      .logo {
+        font-size: clamp(2.05rem, 10vw, 2.8rem);
+        line-height: 1.05;
+      }
+
+      .subtitle {
+        font-size: .95rem;
+        line-height: 1.42;
+      }
+
+      main {
+        padding: 10px 8px 34px;
+        gap: 12px;
+      }
+
+      .card {
+        padding: 12px;
+        border-radius: 16px;
+        overflow: hidden;
+      }
+
+      .card h2 {
+        font-size: 1.08rem;
+      }
+
+      .top-controls {
+        gap: 8px;
+      }
+
+      label {
+        font-size: .9rem;
+      }
+
+      input, select {
+        padding: 10px 11px;
+      }
+
+      .hint {
+        font-size: .88rem;
+        line-height: 1.38;
+      }
+
+      .plate-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 8px;
+      }
+
+      .plate-name {
+        font-size: .98rem;
+      }
+
+      .position-buttons {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 4px;
+      }
+
+      .pos-btn {
+        padding: 8px 0;
+        min-width: 0;
+        font-size: .88rem;
+        border-radius: 10px;
+      }
+
+      .matrix-wrap {
+        margin: 0 -4px;
+        padding: 0 4px 4px;
+      }
+
+      table {
+        min-width: auto;
+        border-spacing: 4px;
+      }
+
+      .relation {
+        min-width: 40px;
+        padding: 5px 2px;
+      }
+
+      .solve-btn {
+        padding: 13px;
+      }
+
+      .button-row {
+        gap: 7px;
+      }
+
+      .button-row .button,
+      .button-row button {
+        padding: 10px 12px;
+      }
+
+      .support-card p {
+        font-size: .92rem;
+      }
+
+      .disclaimer {
+        font-size: .78rem;
+        padding: 0 6px;
+      }
+    }
+
+    @media (min-width: 860px) {
+      main {
+        grid-template-columns: .9fr 1.1fr;
+      }
+
+      .span-2 {
+        grid-column: span 2;
+      }
+
+      .top-controls {
+        grid-template-columns: 1fr 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">🔓 Gothic Remake Lockbreaker</div>
+    <p class="subtitle">
+      Free Gothic Remake lockpick solver. Solve lockpicking puzzles by entering plate positions and interactions.
+    </p>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>1. Lock setup</h2>
+      <div class="top-controls">
+        <div>
+          <label for="lockName">Lock name</label>
+          <input id="lockName" placeholder="e.g. Old Mine chest" maxlength="80" />
+        </div>
+        <div>
+          <label for="plateCount">Plates</label>
+          <select id="plateCount">
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+            <option selected>5</option>
+            <option>6</option>
+            <option>7</option>
+          </select>
+        </div>
+      </div>
+
+      <p class="hint">
+        Plate 1 is the bottom plate, so the list below is shown from top to bottom. Use <b>-3</b> for far left, <b>0</b> for center, <b>+3</b> for far right.
+        Goal: all plates at <b>0</b>. Left move increases position by <b>+1</b>, right move decreases it by <b>-1</b>.
+      </p>
+
+      <div id="plates" class="plates" style="margin-top:12px;"></div>
+    </section>
+
+    <section class="card">
+      <h2>2. Interactions</h2>
+      <p class="hint">
+        Read each row like this: <b>When I move Plate X, what happens to the other plates?</b>
+        Click cells to cycle: <b>—</b> no effect, <b>Same</b> same direction, <b>Opp.</b> opposite direction.
+      </p>
+      <div class="matrix-wrap">
+        <table id="matrix"></table>
+      </div>
+    </section>
+
+    <section class="card span-2">
+      <h2>3. Solution</h2>
+
+      <div class="solve-options">
+        <label for="solveMode">Algorithm mode</label>
+        <select id="solveMode">
+          <option value="fewer-switches">Fewer plate switches</option>
+          <option value="shortest">Shortest moves</option>
+        </select>
+        <p class="hint" id="solveModeDescription"></p>
+      </div>
+
+      <div class="actions">
+        <button class="solve-btn" id="solveBtn">Solve lock</button>
+      </div>
+      <div id="result" class="result" style="margin-top:12px;">Enter lock data and press Solve.</div>
+      <div class="button-row">
+        <button class="secondary" id="copyBtn">Copy solution</button>
+        <button class="secondary" id="shareBtn">Create share link</button>
+        <button class="secondary" id="resetBtn">Reset</button>
+      </div>
+      <div id="shareInfo" class="small-note"></div>
+    </section>
+
+    <section class="card faq-card span-2">
+      <h2>FAQ</h2>
+
+      <h3>How do I solve lockpicking puzzles in Gothic Remake?</h3>
+      <p>
+        Enter the plate positions and interactions into the Gothic Remake lockpick solver.
+        By default, the solver prioritizes reducing plate switches for easier in-game execution, but you can also use "Shortest moves" mode for the minimum move count.
+      </p>
+
+      <h3>Does this solver work for 7-plate locks?</h3>
+      <p>
+        Yes. The solver supports Gothic Remake lockpicking puzzles with 1 to 7 plates.
+      </p>
+
+      <h3>What do “Same” and “Opp.” mean?</h3>
+      <p>
+        “Same” means the affected plate moves in the same direction as the moved plate.
+        “Opp.” means it moves in the opposite direction.
+      </p>
+
+      <h3>What does "x3" mean in the solution?</h3>
+      <p>
+        It means you should perform that move 3 times in a row. For example, "Plate 2 → Right x3" means move Plate 2 to the right 3 times.
+      </p>
+
+      <h3>What is the difference between algorithm modes?</h3>
+      <p>
+        “Fewer plate switches” tries to reduce how often you switch between plates, which can make the solution easier to follow, but it may use more moves.
+        “Shortest moves” finds the solution with the lowest number of individual moves.
+      </p>
+
+      <h3>Can I share the solution with others?</h3>
+      <p>
+        Yes! Click "Copy solution" to copy the move sequence to your clipboard. You can paste it on Discord, Reddit, or Steam to share with others.
+      </p>
+
+      <h3>What if the solver takes too long?</h3>
+      <p>
+        The solver will try for up to 15 seconds. If no solution is found by then, it shows "No solution found" — this usually means the puzzle is impossible or too complex for the browser.
+      </p>
+
+      <h3>Is this an official Gothic Remake tool?</h3>
+      <p>
+        No. Gothic Remake Lockbreaker is a fan-made lockpicking puzzle solver.
+      </p>
+    </section>
+
+    <section class="span-2 disclaimer">
+      Gothic Remake Lockbreaker is a fan-made tool and is not affiliated with, endorsed by, or sponsored by Alkimia Interactive, THQ Nordic, or the Gothic Remake development team.
+      “Gothic” and “Gothic Remake” are trademarks of their respective owners.
+    </section>
+
+    <div class="footer span-2">
+      Runs locally in your browser. No account. No tracking. No data is sent anywhere.
+      <div style="margin-top: 10px;">
+        <a class="pill-link" id="repoTopLink" href="#" target="_blank" rel="noopener">⌘ View source</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Change these if your GitHub username/repo differs.
+    const REPO_OWNER = "kamilcieslik";
+    const REPO_NAME = "gothic-remake-lockbreaker";
+    const REPO_URL = `https://github.com/${REPO_OWNER}/${REPO_NAME}`;
+    const ISSUES_URL = `${REPO_URL}/issues`;
+
+    const MIN = -3;
+    const MAX = 3;
+    const POSITIONS = [-3, -2, -1, 0, 1, 2, 3];
+    const SOLVE_TIMEOUT_MS = 15000;
+    const SOLVE_MODE_STORAGE_KEY = "gothic-remake-lockbreaker-solve-mode";
+
+    const defaultState = () => ({
+      n: 5,
+      name: "",
+      start: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
+      effects: {1: {}, 2: {}, 3: {}, 4: {}, 5: {}},
+      lastMoves: ""
+    });
+
+    const state = defaultState();
+
+    const plateCount = document.getElementById("plateCount");
+    const lockName = document.getElementById("lockName");
+    const platesEl = document.getElementById("plates");
+    const matrixEl = document.getElementById("matrix");
+    const resultEl = document.getElementById("result");
+    const shareInfo = document.getElementById("shareInfo");
+    const solveMode = document.getElementById("solveMode");
+    const solveModeDescription = document.getElementById("solveModeDescription");
+
+    function initRepoLinks() {
+      const ids = ["repoTopLink", "starRepoLink", "repoLink"];
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.href = REPO_URL;
+      });
+
+      const issueIds = ["issuesTopLink", "issuesLink"];
+      issueIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.href = ISSUES_URL;
+      });
+    }
+
+    function getSolveMode() {
+      return solveMode?.value === "shortest" ? "shortest" : "fewer-switches";
+    }
+
+    function updateSolveModeDescription() {
+      if (!solveModeDescription) return;
+
+      if (getSolveMode() === "shortest") {
+        solveModeDescription.textContent =
+          "Finds the solution with the lowest number of individual moves. This is the strict shortest-path solver.";
+      } else {
+        solveModeDescription.textContent =
+          "Tries to reduce how often you switch between plates, making the solution easier to follow in-game. It may use more individual moves.";
+      }
+    }
+
+    function initSolveMode() {
+      if (!solveMode) return;
+
+      try {
+        const storedMode = localStorage.getItem(SOLVE_MODE_STORAGE_KEY);
+        solveMode.value = storedMode === "shortest" ? "shortest" : "fewer-switches";
+      } catch {
+        solveMode.value = "fewer-switches";
+      }
+
+      updateSolveModeDescription();
+
+      solveMode.addEventListener("change", () => {
+        updateSolveModeDescription();
+
+        try {
+          localStorage.setItem(SOLVE_MODE_STORAGE_KEY, getSolveMode());
+        } catch {
+          // localStorage may be unavailable in some browser modes. The app should still work.
+        }
+      });
+    }
+
+    function normalizeStateForN() {
+      state.n = Math.max(1, Math.min(7, Number(state.n) || 5));
+
+      for (let i = 1; i <= state.n; i++) {
+        if (state.start[i] === undefined) state.start[i] = 0;
+        if (!state.effects[i]) state.effects[i] = {};
+      }
+
+      Object.keys(state.start).forEach(k => {
+        if (+k > state.n) delete state.start[k];
+      });
+
+      Object.keys(state.effects).forEach(src => {
+        if (+src > state.n) {
+          delete state.effects[src];
+          return;
+        }
+        Object.keys(state.effects[src]).forEach(target => {
+          if (+target > state.n || target === src) delete state.effects[src][target];
+        });
+      });
+    }
+
+    function render() {
+      normalizeStateForN();
+      plateCount.value = String(state.n);
+      lockName.value = state.name || "";
+      renderPlates();
+      renderMatrix();
+    }
+
+    function renderPlates() {
+      platesEl.innerHTML = "";
+
+      for (let i = state.n; i >= 1; i--) {
+        const row = document.createElement("div");
+        row.className = "plate-row";
+
+        const name = document.createElement("div");
+        name.className = "plate-name";
+        name.textContent = `Plate ${i}`;
+
+        const buttons = document.createElement("div");
+        buttons.className = "position-buttons";
+
+        POSITIONS.forEach(pos => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "pos-btn" + (state.start[i] === pos ? " active" : "");
+          btn.textContent = pos > 0 ? `+${pos}` : String(pos);
+          btn.addEventListener("click", () => {
+            state.start[i] = pos;
+            renderPlates();
+            clearShareMessage();
+          });
+          btn.setAttribute("aria-label", `Plate ${i} position ${pos}`);
+          buttons.appendChild(btn);
+        });
+
+        row.appendChild(name);
+        row.appendChild(buttons);
+        platesEl.appendChild(row);
+      }
+    }
+
+    function updateRelationButton(btn, value, src, target) {
+      btn.className = "relation " + (
+        value === "same" ? "same" :
+        value === "opposite" ? "opposite" :
+        ""
+      );
+
+      btn.textContent =
+        value === "same" ? "Same" :
+        value === "opposite" ? "Opp." :
+        "—";
+
+      const description =
+        value === "same" ? "moves in the same direction" :
+        value === "opposite" ? "moves in the opposite direction" :
+        "has no effect";
+
+      btn.setAttribute(
+        "aria-label",
+        `When moving Plate ${src}, Plate ${target} ${description}`
+      );
+    }
+
+    function renderMatrix() {
+      matrixEl.innerHTML = "";
+
+      const header = document.createElement("tr");
+      const corner = document.createElement("th");
+      corner.textContent = "Plate ↓";
+      header.appendChild(corner);
+
+      for (let target = 1; target <= state.n; target++) {
+        const th = document.createElement("th");
+        th.textContent = `P ${target}`;
+        header.appendChild(th);
+      }
+      matrixEl.appendChild(header);
+
+      for (let src = state.n; src >= 1; src--) {
+        const tr = document.createElement("tr");
+
+        const rowHead = document.createElement("th");
+        rowHead.textContent = `P ${src}`;
+        tr.appendChild(rowHead);
+
+        for (let target = 1; target <= state.n; target++) {
+          const td = document.createElement("td");
+          const btn = document.createElement("button");
+          btn.type = "button";
+
+          if (src === target) {
+            btn.className = "relation disabled";
+            btn.textContent = "Self";
+            btn.disabled = true;
+          } else {
+            const value = state.effects[src]?.[target] || "none";
+            updateRelationButton(btn, value, src, target);
+
+            btn.addEventListener("click", () => {
+              cycleRelation(src, target);
+              const newValue = state.effects[src]?.[target] || "none";
+              updateRelationButton(btn, newValue, src, target);
+              clearShareMessage();
+            });
+          }
+
+          td.appendChild(btn);
+          tr.appendChild(td);
+        }
+
+        matrixEl.appendChild(tr);
+      }
+    }
+
+    function cycleRelation(src, target) {
+      const current = state.effects[src]?.[target] || "none";
+      if (!state.effects[src]) state.effects[src] = {};
+
+      if (current === "none") state.effects[src][target] = "same";
+      else if (current === "same") state.effects[src][target] = "opposite";
+      else delete state.effects[src][target];
+    }
+
+    function keyOf(values) {
+      return values.join(",");
+    }
+
+    function isGoal(values) {
+      return values.every(v => v === 0);
+    }
+
+    function applyMove(values, plate, direction) {
+      const delta = direction === "left" ? 1 : -1;
+      const next = values.slice();
+
+      function add(index, amount) {
+        next[index - 1] += amount;
+      }
+
+      add(plate, delta);
+
+      const effects = state.effects[plate] || {};
+      for (const [targetStr, relation] of Object.entries(effects)) {
+        const target = Number(targetStr);
+        const amount = relation === "same" ? delta : -delta;
+        add(target, amount);
+      }
+
+      if (next.some(v => v < MIN || v > MAX)) return null;
+      return next;
+    }
+
+    function buildSolution(goalIndex, states, parents) {
+      const moves = [];
+      const pathStates = [];
+
+      let index = goalIndex;
+
+      while (index !== -1) {
+        pathStates.push(states[index]);
+
+        const parent = parents[index];
+        if (parent.move) {
+          const count = parent.move.count || 1;
+          for (let i = 0; i < count; i++) {
+            moves.push({
+              plate: parent.move.plate,
+              direction: parent.move.direction
+            });
+          }
+        }
+
+        index = parent.prev;
+      }
+
+      moves.reverse();
+      pathStates.reverse();
+
+      return {
+        moves,
+        states: pathStates
+      };
+    }
+
+    function solveShortestMoves() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
+
+      if (isGoal(start)) {
+        return { moves: [], states: [start] };
+      }
+
+      const states = [start];
+      const parents = [{ prev: -1, move: null }];
+      const queue = [0];
+      const seen = new Map([[keyOf(start), 0]]);
+
+      let head = 0;
+      const startTime = Date.now();
+
+      while (head < queue.length) {
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
+        }
+
+        const currentIndex = queue[head++];
+        const currentValues = states[currentIndex];
+
+        for (let plate = 1; plate <= state.n; plate++) {
+          for (const direction of ["left", "right"]) {
+            const nextValues = applyMove(currentValues, plate, direction);
+            if (!nextValues) continue;
+
+            const key = keyOf(nextValues);
+            if (seen.has(key)) continue;
+
+            const move = { plate, direction };
+            const nextIndex = states.length;
+
+            seen.set(key, nextIndex);
+            states.push(nextValues);
+            parents.push({
+              prev: currentIndex,
+              move
+            });
+
+            if (isGoal(nextValues)) {
+              return buildSolution(nextIndex, states, parents);
+            }
+
+            queue.push(nextIndex);
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function solveFewerPlateSwitches() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) {
+        start.push(state.start[i]);
+      }
+
+      if (isGoal(start)) {
+        return { moves: [], states: [start] };
+      }
+
+      const states = [start];
+      const parents = [{ prev: -1, move: null }];
+      const queue = [0];
+      const seen = new Map([[keyOf(start), 0]]);
+
+      let head = 0;
+      const startTime = Date.now();
+
+      while (head < queue.length) {
+        if (Date.now() - startTime > SOLVE_TIMEOUT_MS) {
+          return { timeout: true };
+        }
+
+        const currentIndex = queue[head++];
+        const currentValues = states[currentIndex];
+
+        for (let plate = 1; plate <= state.n; plate++) {
+          for (const direction of ["left", "right"]) {
+            let chainValues = currentValues;
+
+            for (let count = 1; ; count++) {
+              chainValues = applyMove(chainValues, plate, direction);
+              if (!chainValues) break;
+
+              const key = keyOf(chainValues);
+              if (seen.has(key)) continue;
+
+              const nextIndex = states.length;
+
+              seen.set(key, nextIndex);
+              states.push(chainValues);
+              parents.push({
+                prev: currentIndex,
+                move: {
+                  plate,
+                  direction,
+                  count
+                }
+              });
+
+              if (isGoal(chainValues)) {
+                return buildSolution(nextIndex, states, parents);
+              }
+
+              queue.push(nextIndex);
+            }
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function solve() {
+      return getSolveMode() === "fewer-switches"
+        ? solveFewerPlateSwitches()
+        : solveShortestMoves();
+    }
+
+    function formatSolution(solution) {
+      if (solution?.timeout) {
+        state.lastMoves = "";
+        return `<span class="error">Solving timed out.</span>\nThe lock may be too complex for the browser, or the entered interactions may be incorrect.`;
+      }
+
+      if (!solution) {
+        state.lastMoves = "";
+        const isAlreadySolved = Object.values(state.start).every(v => v === 0);
+        if (isAlreadySolved) {
+          return `<span class="error">All plates are already centered (0).</span>`;
+        }
+        return `<span class="error">No solution found.</span>\nPossible causes:\n• Incorrect interactions defined\n• Puzzle is impossible to solve\n• Too complex for browser (timeout)`;
+      }
+
+      if (solution.moves.length === 0) {
+        state.lastMoves = "Already solved.";
+        return `<span class="success">Already solved.</span>`;
+      }
+
+      const lines = [];
+      const title = state.name ? `${escapeHtml(state.name)} — ` : "";
+      lines.push(`<span class="success">${title}Solved in ${solution.moves.length} moves.</span>`);
+      lines.push("");
+
+      // Group consecutive identical moves
+      const groupedMoves = [];
+      let currentGroup = null;
+
+      solution.moves.forEach((move) => {
+        if (currentGroup && currentGroup.plate === move.plate && currentGroup.direction === move.direction) {
+          currentGroup.count++;
+        } else {
+          if (currentGroup) groupedMoves.push(currentGroup);
+          currentGroup = { plate: move.plate, direction: move.direction, count: 1 };
+        }
+      });
+      if (currentGroup) groupedMoves.push(currentGroup);
+
+      // Format grouped moves
+      groupedMoves.forEach((group, idx) => {
+        const dir = group.direction === "left" ? "Left" : "Right";
+        const suffix = group.count > 1 ? ` x${group.count}` : "";
+        lines.push(`${String(idx + 1).padStart(2, " ")}. Plate ${group.plate} → ${dir}${suffix}`);
+      });
+
+      state.lastMoves = groupedMoves
+        .map((group) => `Plate ${group.plate} → ${group.direction === "left" ? "Left" : "Right"}${group.count > 1 ? ` x${group.count}` : ""}`)
+        .join("\n");
+
+      return lines.join("\n");
+    }
+
+    function compactSetup() {
+      normalizeStateForN();
+
+      const start = [];
+      for (let i = 1; i <= state.n; i++) start.push(state.start[i]);
+
+      const effects = [];
+      for (let src = 1; src <= state.n; src++) {
+        const row = [];
+        for (let target = 1; target <= state.n; target++) {
+          if (src === target) {
+            row.push(0);
+          } else {
+            const relation = state.effects[src]?.[target] || "none";
+            row.push(relation === "same" ? 1 : relation === "opposite" ? 2 : 0);
+          }
+        }
+        effects.push(row);
+      }
+
+      return {
+        v: 1,
+        n: state.n,
+        name: state.name || "",
+        start,
+        effects
+      };
+    }
+
+    function loadCompactSetup(payload) {
+      if (!payload || payload.v !== 1) throw new Error("Unsupported setup format.");
+      if (!Number.isInteger(payload.n) || payload.n < 1 || payload.n > 7) throw new Error("Invalid plate count.");
+
+      state.n = payload.n;
+      state.name = typeof payload.name === "string" ? payload.name.slice(0, 80) : "";
+      state.start = {};
+      state.effects = {};
+
+      for (let i = 1; i <= state.n; i++) {
+        const value = Number(payload.start?.[i - 1]);
+        if (!Number.isInteger(value) || value < MIN || value > MAX) throw new Error(`Invalid position for plate ${i}.`);
+        state.start[i] = value;
+      }
+
+      for (let src = 1; src <= state.n; src++) {
+        state.effects[src] = {};
+        for (let target = 1; target <= state.n; target++) {
+          if (src === target) continue;
+          const value = Number(payload.effects?.[src - 1]?.[target - 1] || 0);
+          if (value === 1) state.effects[src][target] = "same";
+          if (value === 2) state.effects[src][target] = "opposite";
+        }
+      }
+
+      normalizeStateForN();
+    }
+
+    function encodeSetup(payload) {
+      const json = JSON.stringify(payload);
+      return btoa(unescape(encodeURIComponent(json)))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+    }
+
+    function decodeSetup(value) {
+      const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((value.length + 3) % 4);
+      const json = decodeURIComponent(escape(atob(padded)));
+      return JSON.parse(json);
+    }
+
+    async function createShareLink() {
+      state.name = lockName.value.trim();
+      const encoded = encodeSetup(compactSetup());
+      const url = `${location.origin}${location.pathname}?lock=${encoded}`;
+      history.replaceState(null, "", url);
+
+      try {
+        await navigator.clipboard.writeText(url);
+        shareInfo.textContent = "Share link copied to clipboard.";
+      } catch {
+        shareInfo.textContent = "Share link created in the address bar. Copy it from your browser.";
+      }
+    }
+
+    function loadFromUrl() {
+      const params = new URLSearchParams(location.search);
+      const lock = params.get("lock");
+      if (!lock) return;
+
+      try {
+        const payload = decodeSetup(lock);
+        loadCompactSetup(payload);
+        resultEl.innerHTML = "Shared lock loaded. Press Solve.";
+      } catch (e) {
+        resultEl.innerHTML = `<span class="error">Could not load shared lock:</span> ${escapeHtml(e.message)}`;
+      }
+    }
+
+    function resetAll() {
+      const fresh = defaultState();
+      state.n = fresh.n;
+      state.name = fresh.name;
+      state.start = fresh.start;
+      state.effects = fresh.effects;
+      state.lastMoves = "";
+      resultEl.innerHTML = "Enter lock data and press Solve.";
+      shareInfo.textContent = "";
+      history.replaceState(null, "", location.pathname);
+      render();
+    }
+
+    function clearShareMessage() {
+      shareInfo.textContent = "";
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    plateCount.addEventListener("change", () => {
+      state.n = Number(plateCount.value);
+      render();
+      clearShareMessage();
+    });
+
+    lockName.addEventListener("input", () => {
+      state.name = lockName.value.trim();
+      clearShareMessage();
+    });
+
+    lockName.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        document.getElementById("solveBtn").click();
+      }
+    });
+
+    document.getElementById("solveBtn").addEventListener("click", () => {
+      const btn = document.getElementById("solveBtn");
+      const originalText = btn.textContent;
+      
+      btn.textContent = "Solving...";
+      btn.disabled = true;
+      
+      try {
+        state.name = lockName.value.trim();
+        const solution = solve();
+        resultEl.innerHTML = formatSolution(solution);
+        resultEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById("shareBtn").addEventListener("click", createShareLink);
+    document.getElementById("resetBtn").addEventListener("click", resetAll);
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("copyBtn");
+      const textToCopy = resultEl.innerText;
+
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        const originalText = btn.textContent;
+        btn.textContent = "Copied!";
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      } catch {
+        alert("Could not copy to clipboard.");
+      }
+    });
+
+    initRepoLinks();
+    initSolveMode();
+    loadFromUrl();
+    render();
+  </script>
+</body>
+</html>
