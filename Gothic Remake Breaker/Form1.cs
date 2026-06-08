@@ -22,10 +22,34 @@ namespace Gothic_Remake_Breaker
         private CheckBox[,] _sameCheckBoxes = new CheckBox[7, 7];
         private CheckBox[,] _oppositeCheckBoxes = new CheckBox[7, 7];
 
-        // Задержка между нажатиями клавиш (мс) — можно менять
-        private const int KeyDelayMs = 120;
-        // Задержка перед началом отправки (мс) — даём время переключиться на игру
-        private const int StartDelayMs = 2000;
+        // Кнопка сброса
+        private System.Windows.Forms.Button _buttonClear;
+
+        // Задержка между нажатиями клавиш W/S (переключение пластин) (мс)
+        private int _plateSwitchDelayMs = 150;
+        // Задержка между нажатиями клавиш A/D (движение пластины) (мс)
+        private int _moveDelayMs = 150;
+        // Задержка перед началом отправки (мс)
+        private const int StartDelayMs = 300;
+
+        public int PlateSwitchDelayMs => _plateSwitchDelayMs;
+        public int MoveDelayMs => _moveDelayMs;
+
+        private void ApplyDelayFromUI()
+        {
+            if (_nudPlateSwitchDelay != null)
+                _plateSwitchDelayMs = (int)_nudPlateSwitchDelay.Value;
+            if (_nudMoveDelay != null)
+                _moveDelayMs = (int)_nudMoveDelay.Value;
+        }
+
+        private void SyncUIFromDelays()
+        {
+            if (_nudPlateSwitchDelay != null)
+                _nudPlateSwitchDelay.Value = _plateSwitchDelayMs;
+            if (_nudMoveDelay != null)
+                _nudMoveDelay.Value = _moveDelayMs;
+        }
 
         // P/Invoke для SendInput — надёжная отправка клавиш в любое окно
         [StructLayout(LayoutKind.Sequential)]
@@ -83,6 +107,30 @@ namespace Gothic_Remake_Breaker
         [DllImport("user32.dll")]
         private static extern ushort MapVirtualKey(uint uCode, uint uMapType);
 
+        // Глобальный хоткей
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        // Константы для RegisterHotKey
+        private const int HOTKEY_ID = 1;
+        private const uint MOD_NOREPEAT = 0x4000;
+        private const int WM_HOTKEY = 0x0312;
+
+        // Статический метод для отмены хоткея (вызывается из Designer.cs)
+        public static void UnregisterHotkey()
+        {
+            // Нужно сохранить handle формы — используем статическое поле
+            if (_formHandle != IntPtr.Zero)
+            {
+                UnregisterHotKey(_formHandle, HOTKEY_ID);
+            }
+        }
+
+        private static IntPtr _formHandle = IntPtr.Zero;
+
         // Конвертация: UI-значение (1..7) ↔ внутреннее (-3..3), где "4" = 0 (центр)
         private int UiToInternal(int uiVal) => uiVal - 4;
         private int InternalToUi(int internalVal) => internalVal + 4;
@@ -90,11 +138,50 @@ namespace Gothic_Remake_Breaker
         public Form1()
         {
             InitializeComponent();
-            // Создаём все контролы один раз для макс. количества (7 пластин)
+           // Создаём все контролы один раз для макс. количества (7 пластин)
             CreateAllControlsOnce();
             // Показываем начальные пластины и эффекты (2 по умолчанию)
             GeneratePlateControls(2);
             GenerateEffectControls(2);
+            // Синхронизируем UI с текущими задержками
+            SyncUIFromDelays();
+            // Регистрируем глобальный хоткей F4
+            RegisterGlobalHotkey();
+        }
+
+        private void RegisterGlobalHotkey()
+        {
+            _formHandle = this.Handle;
+            // VK_F4 = 0x73
+            bool ok = RegisterHotKey(_formHandle, HOTKEY_ID, MOD_NOREPEAT, 0x73);
+            if (!ok)
+            {
+                int err = Marshal.GetLastWin32Error();
+                System.Diagnostics.Debug.WriteLine($"RegisterHotKey failed! Error: {err}");
+                MessageBox.Show(
+                    $"Не удалось зарегистрировать глобальный хоткей F4.\n" +
+                    $"Код ошибки: {err}\n\n" +
+                    "Возможно, F4 уже занят другой программой.",
+                    "Ошибка",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+       protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_ID)
+            {
+                if (_chkEnableHotkey != null && _chkEnableHotkey.Checked)
+                    StartAutoPlay();
+                return; // обработано
+            }
+            base.WndProc(ref m);
+        }
+
+        private void checkBoxOntop_CheckedChanged(object sender, EventArgs e)
+        {
+            this.TopMost = checkBoxOntop.Checked;
         }
 
         // Создаёт ВСЕ контролы один раз для макс. количества пластин (7)
@@ -218,17 +305,6 @@ namespace Gothic_Remake_Breaker
             panelEffects.ResumeLayout();
         }
 
-        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
-        {
-            // F4 — авто-отправка WASD в окно игры
-            if (keyData == Keys.F4)
-            {
-                StartAutoPlay();
-                return true; // событие обработано
-            }
-            return base.ProcessCmdKey(ref msg, keyData);
-        }
-
         private void plateCountCheck_CheckedChanged(object sender, EventArgs e)
         {
             // Только один чекбокс может быть активен (как RadioButton)
@@ -246,6 +322,38 @@ namespace Gothic_Remake_Breaker
             {
                 GeneratePlateControls(count);
                 GenerateEffectControls(count);
+           }
+        }
+
+        private void buttonClear_Click(object sender, EventArgs e)
+        {
+            int count = GetSelectedPlateCount();
+
+            // Сбрасываем все пластины на центральную позицию (4)
+            for (int i = 0; i < count; i++)
+            {
+                var panel = _platePanels[i] as FlowLayoutPanel;
+                foreach (Control ctrl in panel.Controls)
+                {
+                    if (ctrl is RadioButton rb && rb.Text == "4")
+                    {
+                        rb.Checked = true;
+                        break;
+                    }
+                }
+            }
+
+            // Снимаем все чекбоксы эффектов
+            for (int src = 0; src < count; src++)
+            {
+                for (int tgt = 0; tgt < count; tgt++)
+                {
+                    if (src != tgt)
+                    {
+                        _sameCheckBoxes[src, tgt].Checked = false;
+                        _oppositeCheckBoxes[src, tgt].Checked = false;
+                    }
+                }
             }
         }
 
@@ -485,6 +593,9 @@ namespace Gothic_Remake_Breaker
         /// </summary>
         private void StartAutoPlay()
         {
+            // Считываем актуальные значения задержек из UI
+            ApplyDelayFromUI();
+
             string resultText = textBoxResult.Text;
             if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains("Решено"))
             {
@@ -513,6 +624,7 @@ namespace Gothic_Remake_Breaker
         private void ExecuteAutoPlay(List<ParsedMove> moves)
         {
             // Коды виртуальных клавиш
+            const byte VK_R = 0x52;
             const byte VK_W = 0x57;
             const byte VK_S = 0x53;
             const byte VK_A = 0x41;
@@ -522,19 +634,23 @@ namespace Gothic_Remake_Breaker
 
             Thread.Sleep(StartDelayMs); // Даём время переключиться на игру
 
+            // Нажимаем R в начале
+            SendVirtualKey(VK_R); // R - сброс
+            Thread.Sleep(PlateSwitchDelayMs);
+
             foreach (var move in moves)
             {
                 // Перемещаем курсор на целевую пластину
                 while (currentPlate < move.PlateIndex)
                 {
                     SendVirtualKey(VK_W); // W — следующая пластина
-                    Thread.Sleep(KeyDelayMs);
+                    Thread.Sleep(PlateSwitchDelayMs);
                     currentPlate++;
                 }
                 while (currentPlate > move.PlateIndex)
                 {
                     SendVirtualKey(VK_S); // S — предыдущая пластина
-                    Thread.Sleep(KeyDelayMs);
+                    Thread.Sleep(PlateSwitchDelayMs);
                     currentPlate--;
                 }
 
@@ -543,16 +659,8 @@ namespace Gothic_Remake_Breaker
                 for (int i = 0; i < move.Count; i++)
                 {
                     SendVirtualKey(moveKey);
-                    Thread.Sleep(KeyDelayMs);
+                    Thread.Sleep(MoveDelayMs);
                 }
-            }
-
-            // Возвращаемся на пластину 1
-            while (currentPlate > 1)
-            {
-                SendVirtualKey(VK_S);
-                Thread.Sleep(KeyDelayMs);
-                currentPlate--;
             }
         }
     }
