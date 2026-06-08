@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace Gothic_Remake_Breaker
@@ -19,6 +21,67 @@ namespace Gothic_Remake_Breaker
         // Кэш чекбоксов эффектов: [src, tgt] → Same / Opposite
         private CheckBox[,] _sameCheckBoxes = new CheckBox[7, 7];
         private CheckBox[,] _oppositeCheckBoxes = new CheckBox[7, 7];
+
+        // Задержка между нажатиями клавиш (мс) — можно менять
+        private const int KeyDelayMs = 120;
+        // Задержка перед началом отправки (мс) — даём время переключиться на игру
+        private const int StartDelayMs = 2000;
+
+        // P/Invoke для SendInput — надёжная отправка клавиш в любое окно
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MOUSEINPUT
+        {
+            public int dx;
+            public int dy;
+            public uint mouseData;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct KEYBDINPUT
+        {
+            public ushort wVk;
+            public ushort wScan;
+            public uint dwFlags;
+            public uint time;
+            public IntPtr dwExtraInfo;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct HARDWAREINPUT
+        {
+            public uint uMsg;
+            public ushort wParamL;
+            public ushort wParamH;
+        }
+
+        // Union — все три структуры начинаются с одного смещения
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InputUnion
+        {
+            [FieldOffset(0)] public MOUSEINPUT mi;
+            [FieldOffset(0)] public KEYBDINPUT ki;
+            [FieldOffset(0)] public HARDWAREINPUT hi;
+        }
+
+        // Правильная структура INPUT: type + union
+        [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public InputUnion u;
+        }
+
+        private const uint INPUT_KEYBOARD = 1;
+        private const uint KEYEVENTF_KEYUP = 0x0002;
+
+        [DllImport("user32.dll", SetLastError = true)] // <-- ВАЖНО: SetLastError = true
+        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+
+        [DllImport("user32.dll")]
+        private static extern ushort MapVirtualKey(uint uCode, uint uMapType);
 
         // Конвертация: UI-значение (1..7) ↔ внутреннее (-3..3), где "4" = 0 (центр)
         private int UiToInternal(int uiVal) => uiVal - 4;
@@ -153,6 +216,17 @@ namespace Gothic_Remake_Breaker
 
             panelPlates.ResumeLayout();
             panelEffects.ResumeLayout();
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // F4 — авто-отправка WASD в окно игры
+            if (keyData == Keys.F4)
+            {
+                StartAutoPlay();
+                return true; // событие обработано
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
 
         private void plateCountCheck_CheckedChanged(object sender, EventArgs e)
@@ -323,6 +397,163 @@ namespace Gothic_Remake_Breaker
             var solver = new LockpickSolver();
             var result = solver.Solve(config);
             textBoxResult.Text = solver.FormatSolution(result, "Результат");
+        }
+
+        // ======================== АВТО-ОТПРАВКА WASD ========================
+
+        private struct ParsedMove
+        {
+            public int PlateIndex;   // 1-based (как в выводе)
+            public Direction Direction;
+            public int Count;
+        }
+
+        /// <summary>
+        /// Парсит текст результата решателя в список ходов
+        /// Формат: " N. Пластина X -> Влево/Вправо [xN]"
+        /// </summary>
+        private static List<ParsedMove> ParseResult(string text)
+        {
+            var moves = new List<ParsedMove>();
+            if (string.IsNullOrWhiteSpace(text)) return moves;
+
+            foreach (var line in text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.Trim();
+                // Ищем "Пластина N"
+                var plateMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"Пластина\s+(\d+)");
+                if (!plateMatch.Success) continue;
+
+                int plate = int.Parse(plateMatch.Groups[1].Value);
+
+                // Определяем направление
+                Direction dir = Direction.Left;
+                if (trimmed.Contains("Вправо")) dir = Direction.Right;
+
+                // Считываем множитель xN
+                int count = 1;
+                var countMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"x(\d+)");
+                if (countMatch.Success)
+                    count = int.Parse(countMatch.Groups[1].Value);
+
+                moves.Add(new ParsedMove { PlateIndex = plate, Direction = dir, Count = count });
+            }
+            return moves;
+        }
+
+        /// <summary>
+        /// Отправляет одно нажатие клавиши (keydown + keyup) через SendInput
+        /// </summary>
+        private static void SendVirtualKey(byte vk)
+        {
+            INPUT[] inputs = new INPUT[2];
+
+            // KeyDown
+            inputs[0].type = INPUT_KEYBOARD;
+            inputs[0].u.ki = new KEYBDINPUT
+            {
+                wVk = vk,
+                wScan = MapVirtualKey(vk, 0),
+                dwFlags = 0,
+                time = 0,
+                dwExtraInfo = IntPtr.Zero
+            };
+
+            // KeyUp
+            inputs[1].type = INPUT_KEYBOARD;
+            inputs[1].u.ki = new KEYBDINPUT
+            {
+                wVk = vk,
+                wScan = MapVirtualKey(vk, 0),
+                dwFlags = KEYEVENTF_KEYUP,
+                time = 0,
+                dwExtraInfo = IntPtr.Zero
+            };
+
+            uint sent = SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+
+            // Для отладки — если что-то пошло не так, увидим в Output Window
+            if (sent == 0)
+            {
+                int error = Marshal.GetLastWin32Error();
+                System.Diagnostics.Debug.WriteLine($"SendInput failed! Error code: {error}");
+            }
+        }
+
+        /// <summary>
+        /// Запускает авто-отправку WASD на основе результата решателя
+        /// </summary>
+        private void StartAutoPlay()
+        {
+            string resultText = textBoxResult.Text;
+            if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains("Решено"))
+            {
+                MessageBox.Show("Сначала решите замок!", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var moves = ParseResult(resultText);
+            if (moves.Count == 0)
+            {
+                MessageBox.Show("Не удалось распознать ходы в результате.", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // Запускаем в отдельном потоке, чтобы не блокировать UI
+            var worker = new Thread(() => ExecuteAutoPlay(moves))
+            {
+                IsBackground = true
+            };
+            worker.Start();
+        }
+
+        /// <summary>
+        /// Выполняет последовательность WASD-нажатий
+        /// </summary>
+        private void ExecuteAutoPlay(List<ParsedMove> moves)
+        {
+            // Коды виртуальных клавиш
+            const byte VK_W = 0x57;
+            const byte VK_S = 0x53;
+            const byte VK_A = 0x41;
+            const byte VK_D = 0x44;
+
+            int currentPlate = 1; // Начинаем с пластины 1
+
+            Thread.Sleep(StartDelayMs); // Даём время переключиться на игру
+
+            foreach (var move in moves)
+            {
+                // Перемещаем курсор на целевую пластину
+                while (currentPlate < move.PlateIndex)
+                {
+                    SendVirtualKey(VK_W); // W — следующая пластина
+                    Thread.Sleep(KeyDelayMs);
+                    currentPlate++;
+                }
+                while (currentPlate > move.PlateIndex)
+                {
+                    SendVirtualKey(VK_S); // S — предыдущая пластина
+                    Thread.Sleep(KeyDelayMs);
+                    currentPlate--;
+                }
+
+                // Выполняем движение пластины
+                byte moveKey = move.Direction == Direction.Left ? VK_A : VK_D;
+                for (int i = 0; i < move.Count; i++)
+                {
+                    SendVirtualKey(moveKey);
+                    Thread.Sleep(KeyDelayMs);
+                }
+            }
+
+            // Возвращаемся на пластину 1
+            while (currentPlate > 1)
+            {
+                SendVirtualKey(VK_S);
+                Thread.Sleep(KeyDelayMs);
+                currentPlate--;
+            }
         }
     }
 
