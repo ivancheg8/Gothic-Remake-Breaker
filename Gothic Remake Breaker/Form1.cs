@@ -20,12 +20,14 @@ namespace Gothic_Remake_Breaker
         private CheckBox[,] _oppositeCheckBoxes = new CheckBox[MAX_PLATES, MAX_PLATES];
         private System.Windows.Forms.Button _buttonClear;
 
-        private int _plateSwitchDelayMs = 150;
-        private int _moveDelayMs = 150;
+        private int _plateSwitchDelayMs = 300;
+        private int _moveDelayMs = 300;
+        private int _rdelayMs = 1000;
         private const int StartDelayMs = 300;
 
         public int PlateSwitchDelayMs => _plateSwitchDelayMs;
         public int MoveDelayMs => _moveDelayMs;
+        public int RdelayMs => _rdelayMs;
 
         private void ApplyDelayFromUI()
         {
@@ -33,6 +35,8 @@ namespace Gothic_Remake_Breaker
                 _plateSwitchDelayMs = Math.Max(0, (int)_nudPlateSwitchDelay.Value);
             if (_nudMoveDelay != null)
                 _moveDelayMs = Math.Max(0, (int)_nudMoveDelay.Value);
+            if (Rdelay != null)
+                _rdelayMs = Math.Max(0, (int)Rdelay.Value);
         }
 
         private void SyncUIFromDelays()
@@ -41,6 +45,8 @@ namespace Gothic_Remake_Breaker
                 _nudPlateSwitchDelay.Value = _plateSwitchDelayMs;
             if (_nudMoveDelay != null)
                 _nudMoveDelay.Value = _moveDelayMs;
+            if (Rdelay != null)
+                Rdelay.Value = _rdelayMs;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -181,7 +187,7 @@ namespace Gothic_Remake_Breaker
                     Text = $"Plate {i + 1}",
                     AutoSize = true,
                     Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Bold),
-                    Margin = new Padding(0, 0, 6, 0)
+                    Margin = new Padding(0, 5, 6, 0)
                 };
                 platePanel.Controls.Add(plateLabel);
 
@@ -236,7 +242,7 @@ namespace Gothic_Remake_Breaker
                     Text = $"Plate {src + 1}",
                     AutoSize = true,
                     Font = new System.Drawing.Font(this.Font, System.Drawing.FontStyle.Bold),
-                    Margin = new Padding(6, 0, 6, 0)
+                    Margin = new Padding(6, 7, 6, 0)
                 };
 
                 var oppositePanel = new FlowLayoutPanel();
@@ -394,13 +400,16 @@ namespace Gothic_Remake_Breaker
             {
                 for (int tgt = 0; tgt < MAX_PLATES; tgt++)
                 {
-                    bool show = (src < plateCount && tgt < plateCount && src != tgt);
+                    // Показываем чекбокс, если оба индекса в пределах количества пластин
+                    bool show = (src < plateCount && tgt < plateCount);
                     _sameCheckBoxes[src, tgt].Visible = show;
                     _oppositeCheckBoxes[src, tgt].Visible = show;
 
-                    // Отключаем невидимые чекбоксы
-                    _sameCheckBoxes[src, tgt].Enabled = show;
-                    _oppositeCheckBoxes[src, tgt].Enabled = show;
+                    // Отключаем только те, где источник совпадает с целью (диагональ),
+                    // и те, что выходят за пределы plateCount
+                    bool enable = show && (src != tgt);
+                    _sameCheckBoxes[src, tgt].Enabled = enable;
+                    _oppositeCheckBoxes[src, tgt].Enabled = enable;
                 }
             }
             panelEffects.ResumeLayout();
@@ -653,8 +662,15 @@ namespace Gothic_Remake_Breaker
 
                 Thread.Sleep(StartDelayMs);
 
-                SendVirtualKey(VK_R);
-                Thread.Sleep(PlateSwitchDelayMs);
+                if (_chkEnableHotkey != null && _chkEnableHotkey.Checked && checkBoxReset != null && checkBoxReset.Checked)
+                {
+                    SendVirtualKey(VK_R);
+                    Thread.Sleep(RdelayMs);
+                }
+                else
+                {
+                    Thread.Sleep(PlateSwitchDelayMs);
+                }
 
                 foreach (var move in moves)
                 {
@@ -898,7 +914,7 @@ namespace Gothic_Remake_Breaker
         {
             if (result.Timeout) return $"Ошибка: {result.ErrorMessage}";
             if (!result.Success) return $"Ошибка: {result.ErrorMessage}";
-            if (result.Moves.Count == 0) return "Замок уже открыт (все пластины в центре).";
+            if (result.Moves.Count == 0) return "Замок уже открыт\r\n(все пластины в центре).";
 
             var sb = new StringBuilder();
             string prefix = string.IsNullOrEmpty(lockName) ? "" : $"{lockName} — ";
