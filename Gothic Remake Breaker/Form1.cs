@@ -12,24 +12,16 @@ namespace Gothic_Remake_Breaker
 {
     public partial class Form1 : Form
     {
-        // Кэш контролов — создаются один раз при загрузке для макс. количества пластин
-        private FlowLayoutPanel[] _platePanels = new FlowLayoutPanel[7];
+        private const int MAX_PLATES = 7;
 
-        // Кэш строк эффектов (TableLayoutPanel) — по одной на каждый источник 0..6
-        private TableLayoutPanel[] _effectRows = new TableLayoutPanel[7];
-
-        // Кэш чекбоксов эффектов: [src, tgt] → Same / Opposite
-        private CheckBox[,] _sameCheckBoxes = new CheckBox[7, 7];
-        private CheckBox[,] _oppositeCheckBoxes = new CheckBox[7, 7];
-
-        // Кнопка сброса
+        private FlowLayoutPanel[] _platePanels = new FlowLayoutPanel[MAX_PLATES];
+        private TableLayoutPanel[] _effectRows = new TableLayoutPanel[MAX_PLATES];
+        private CheckBox[,] _sameCheckBoxes = new CheckBox[MAX_PLATES, MAX_PLATES];
+        private CheckBox[,] _oppositeCheckBoxes = new CheckBox[MAX_PLATES, MAX_PLATES];
         private System.Windows.Forms.Button _buttonClear;
 
-        // Задержка между нажатиями клавиш W/S (переключение пластин) (мс)
         private int _plateSwitchDelayMs = 150;
-        // Задержка между нажатиями клавиш A/D (движение пластины) (мс)
         private int _moveDelayMs = 150;
-        // Задержка перед началом отправки (мс)
         private const int StartDelayMs = 300;
 
         public int PlateSwitchDelayMs => _plateSwitchDelayMs;
@@ -38,9 +30,9 @@ namespace Gothic_Remake_Breaker
         private void ApplyDelayFromUI()
         {
             if (_nudPlateSwitchDelay != null)
-                _plateSwitchDelayMs = (int)_nudPlateSwitchDelay.Value;
+                _plateSwitchDelayMs = Math.Max(0, (int)_nudPlateSwitchDelay.Value);
             if (_nudMoveDelay != null)
-                _moveDelayMs = (int)_nudMoveDelay.Value;
+                _moveDelayMs = Math.Max(0, (int)_nudMoveDelay.Value);
         }
 
         private void SyncUIFromDelays()
@@ -51,7 +43,6 @@ namespace Gothic_Remake_Breaker
                 _nudMoveDelay.Value = _moveDelayMs;
         }
 
-        // P/Invoke для SendInput — надёжная отправка клавиш в любое окно
         [StructLayout(LayoutKind.Sequential)]
         private struct MOUSEINPUT
         {
@@ -81,7 +72,6 @@ namespace Gothic_Remake_Breaker
             public ushort wParamH;
         }
 
-        // Union — все три структуры начинаются с одного смещения
         [StructLayout(LayoutKind.Explicit)]
         private struct InputUnion
         {
@@ -90,7 +80,6 @@ namespace Gothic_Remake_Breaker
             [FieldOffset(0)] public HARDWAREINPUT hi;
         }
 
-        // Правильная структура INPUT: type + union
         [StructLayout(LayoutKind.Sequential)]
         private struct INPUT
         {
@@ -101,28 +90,24 @@ namespace Gothic_Remake_Breaker
         private const uint INPUT_KEYBOARD = 1;
         private const uint KEYEVENTF_KEYUP = 0x0002;
 
-        [DllImport("user32.dll", SetLastError = true)] // <-- ВАЖНО: SetLastError = true
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
 
         [DllImport("user32.dll")]
         private static extern ushort MapVirtualKey(uint uCode, uint uMapType);
 
-        // Глобальный хоткей
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
-        // Константы для RegisterHotKey
         private const int HOTKEY_ID = 1;
         private const uint MOD_NOREPEAT = 0x4000;
         private const int WM_HOTKEY = 0x0312;
 
-        // Статический метод для отмены хоткея (вызывается из Designer.cs)
         public static void UnregisterHotkey()
         {
-            // Нужно сохранить handle формы — используем статическое поле
             if (_formHandle != IntPtr.Zero)
             {
                 UnregisterHotKey(_formHandle, HOTKEY_ID);
@@ -131,28 +116,22 @@ namespace Gothic_Remake_Breaker
 
         private static IntPtr _formHandle = IntPtr.Zero;
 
-        // Конвертация: UI-значение (1..7) ↔ внутреннее (-3..3), где "4" = 0 (центр)
         private int UiToInternal(int uiVal) => uiVal - 4;
         private int InternalToUi(int internalVal) => internalVal + 4;
 
         public Form1()
         {
             InitializeComponent();
-           // Создаём все контролы один раз для макс. количества (7 пластин)
             CreateAllControlsOnce();
-            // Показываем начальные пластины и эффекты (2 по умолчанию)
             GeneratePlateControls(2);
             GenerateEffectControls(2);
-            // Синхронизируем UI с текущими задержками
             SyncUIFromDelays();
-            // Регистрируем глобальный хоткей F4
             RegisterGlobalHotkey();
         }
 
         private void RegisterGlobalHotkey()
         {
             _formHandle = this.Handle;
-            // VK_F4 = 0x73
             bool ok = RegisterHotKey(_formHandle, HOTKEY_ID, MOD_NOREPEAT, 0x73);
             if (!ok)
             {
@@ -168,13 +147,13 @@ namespace Gothic_Remake_Breaker
             }
         }
 
-       protected override void WndProc(ref Message m)
+        protected override void WndProc(ref Message m)
         {
             if (m.Msg == WM_HOTKEY && m.WParam.ToInt32() == HOTKEY_ID)
             {
                 if (_chkEnableHotkey != null && _chkEnableHotkey.Checked)
                     StartAutoPlay();
-                return; // обработано
+                return;
             }
             base.WndProc(ref m);
         }
@@ -184,15 +163,12 @@ namespace Gothic_Remake_Breaker
             this.TopMost = checkBoxOntop.Checked;
         }
 
-        // Создаёт ВСЕ контролы один раз для макс. количества пластин (7)
-        // Последовательность в panelPlates: Plate 1 (снизу) → Plate 7 (сверху)
         private void CreateAllControlsOnce()
         {
             panelPlates.SuspendLayout();
             panelEffects.SuspendLayout();
 
-            // ПЛАСТИНЫ: добавляем от 7 к 1, чтобы Plate 1 оказалась внизу
-            for (int i = 6; i >= 0; i--)  // <-- было: for (int i = 0; i < 7; i++)
+            for (int i = MAX_PLATES - 1; i >= 0; i--)
             {
                 var platePanel = new FlowLayoutPanel();
                 platePanel.AutoSize = false;
@@ -226,8 +202,7 @@ namespace Gothic_Remake_Breaker
                 panelPlates.Controls.Add(platePanel);
             }
 
-            // ЭФФЕКТЫ: добавляем строки от Plate 7 к Plate 1
-            for (int src = 6; src >= 0; src--)  // <-- было: for (int src = 0; src < 7; src++)
+            for (int src = MAX_PLATES - 1; src >= 0; src--)
             {
                 var row = new TableLayoutPanel();
                 row.AutoSize = true;
@@ -242,7 +217,7 @@ namespace Gothic_Remake_Breaker
                 samePanel.AutoSize = true;
                 samePanel.Padding = new Padding(0, 0, 4, 0);
 
-                for (int tgt = 0; tgt < 7; tgt++)
+                for (int tgt = 0; tgt < MAX_PLATES; tgt++)
                 {
                     var cb = new CheckBox
                     {
@@ -270,7 +245,7 @@ namespace Gothic_Remake_Breaker
                 oppositePanel.AutoSize = true;
                 oppositePanel.Padding = new Padding(4, 0, 0, 0);
 
-                for (int tgt = 0; tgt < 7; tgt++)
+                for (int tgt = 0; tgt < MAX_PLATES; tgt++)
                 {
                     var cb = new CheckBox
                     {
@@ -284,8 +259,6 @@ namespace Gothic_Remake_Breaker
                     oppositePanel.Controls.Add(cb);
                 }
 
-                // ВАЖНО: порядок колонок в TableLayoutPanel должен соответствовать описанию
-                // "слева от надписи Plate N — Opposite, справа — Same"
                 row.Controls.Add(oppositePanel, 0, 0);
                 row.Controls.Add(plateLabel, 1, 0);
                 row.Controls.Add(samePanel, 2, 0);
@@ -294,8 +267,7 @@ namespace Gothic_Remake_Breaker
                 panelEffects.Controls.Add(row);
             }
 
-            // Скрываем всё, что за пределами начального значения (2)
-            for (int i = 2; i < 7; i++)
+            for (int i = 2; i < MAX_PLATES; i++)
             {
                 _platePanels[i].Visible = false;
                 _effectRows[i].Visible = false;
@@ -307,7 +279,6 @@ namespace Gothic_Remake_Breaker
 
         private void plateCountCheck_CheckedChanged(object sender, EventArgs e)
         {
-            // Только один чекбокс может быть активен (как RadioButton)
             if (sender is CheckBox current && current.Checked)
             {
                 foreach (Control ctrl in panelPlateCountChecks.Controls)
@@ -322,17 +293,19 @@ namespace Gothic_Remake_Breaker
             {
                 GeneratePlateControls(count);
                 GenerateEffectControls(count);
-           }
+            }
         }
 
         private void buttonClear_Click(object sender, EventArgs e)
         {
             int count = GetSelectedPlateCount();
+            count = Math.Min(count, MAX_PLATES); // Ограничение
 
-            // Сбрасываем все пластины на центральную позицию (4)
             for (int i = 0; i < count; i++)
             {
                 var panel = _platePanels[i] as FlowLayoutPanel;
+                if (panel == null) continue;
+
                 foreach (Control ctrl in panel.Controls)
                 {
                     if (ctrl is RadioButton rb && rb.Text == "4")
@@ -343,12 +316,29 @@ namespace Gothic_Remake_Breaker
                 }
             }
 
-            // Снимаем все чекбоксы эффектов
             for (int src = 0; src < count; src++)
             {
                 for (int tgt = 0; tgt < count; tgt++)
                 {
                     if (src != tgt)
+                    {
+                        _sameCheckBoxes[src, tgt].Checked = false;
+                        _oppositeCheckBoxes[src, tgt].Checked = false;
+                    }
+                }
+            }
+
+            // Сбрасываем все скрытые чекбоксы
+            ClearHiddenCheckboxes(count);
+        }
+
+        private void ClearHiddenCheckboxes(int visibleCount)
+        {
+            for (int src = 0; src < MAX_PLATES; src++)
+            {
+                for (int tgt = 0; tgt < MAX_PLATES; tgt++)
+                {
+                    if (src >= visibleCount || tgt >= visibleCount || src == tgt)
                     {
                         _sameCheckBoxes[src, tgt].Checked = false;
                         _oppositeCheckBoxes[src, tgt].Checked = false;
@@ -363,21 +353,25 @@ namespace Gothic_Remake_Breaker
             {
                 if (ctrl is CheckBox chk && chk.Checked)
                 {
-                    return int.Parse(chk.Tag.ToString());
+                    if (chk.Tag != null && int.TryParse(chk.Tag.ToString(), out int count))
+                    {
+                        return Math.Max(1, Math.Min(count, MAX_PLATES)); // Ограничение диапазона
+                    }
                 }
             }
-            return 7; // fallback
+            return 2; // Значение по умолчанию
         }
 
         private void GeneratePlateControls(int plateCount)
         {
+            plateCount = Math.Max(1, Math.Min(plateCount, MAX_PLATES)); // Ограничение
+
             panelPlates.SuspendLayout();
             panelPlates.Controls.Clear();
 
-            // Добавляем панели в обратном порядке, чтобы Plate 1 оказалась внизу
             for (int i = plateCount - 1; i >= 0; i--)
             {
-                _platePanels[i].Visible = true; // Явно показываем
+                _platePanels[i].Visible = true;
                 panelPlates.Controls.Add(_platePanels[i]);
             }
             panelPlates.ResumeLayout();
@@ -385,24 +379,28 @@ namespace Gothic_Remake_Breaker
 
         private void GenerateEffectControls(int plateCount)
         {
+            plateCount = Math.Max(1, Math.Min(plateCount, MAX_PLATES)); // Ограничение
+
             panelEffects.SuspendLayout();
             panelEffects.Controls.Clear();
 
-            // Добавляем строки в обратном порядке, чтобы Plate 1 оказалась внизу
             for (int i = plateCount - 1; i >= 0; i--)
             {
-                _effectRows[i].Visible = true; // Явно показываем
+                _effectRows[i].Visible = true;
                 panelEffects.Controls.Add(_effectRows[i]);
             }
 
-            // Внутри каждой видимой строки показываем только чекбоксы для tgt < plateCount
-            for (int src = 0; src < plateCount; src++)
+            for (int src = 0; src < MAX_PLATES; src++)
             {
-                for (int tgt = 0; tgt < 7; tgt++)
+                for (int tgt = 0; tgt < MAX_PLATES; tgt++)
                 {
-                    bool show = (tgt < plateCount);
+                    bool show = (src < plateCount && tgt < plateCount && src != tgt);
                     _sameCheckBoxes[src, tgt].Visible = show;
                     _oppositeCheckBoxes[src, tgt].Visible = show;
+
+                    // Отключаем невидимые чекбоксы
+                    _sameCheckBoxes[src, tgt].Enabled = show;
+                    _oppositeCheckBoxes[src, tgt].Enabled = show;
                 }
             }
             panelEffects.ResumeLayout();
@@ -410,7 +408,11 @@ namespace Gothic_Remake_Breaker
 
         private void EffectCheckBox_CheckedChanged(object sender, EventArgs e)
         {
-            // Эффекты применяются мгновенно — просто обновляем состояние
+            // Автоматически снимаем отметку, если чекбокс стал невидимым
+            if (sender is CheckBox cb && !cb.Visible && cb.Checked)
+            {
+                cb.Checked = false;
+            }
         }
 
         private void rbPlate_CheckedChanged(object sender, EventArgs e)
@@ -421,15 +423,20 @@ namespace Gothic_Remake_Breaker
         {
             int count = GetSelectedPlateCount();
             int[] positions = new int[count];
-            // _platePanels[i] соответствует Plate (i+1) напрямую
+
             for (int i = 0; i < count; i++)
             {
                 var panel = _platePanels[i] as FlowLayoutPanel;
+                if (panel == null) continue;
+
                 foreach (Control ctrl in panel.Controls)
                 {
                     if (ctrl is RadioButton rb && rb.Checked)
                     {
-                        positions[i] = UiToInternal(int.Parse(rb.Text));
+                        if (int.TryParse(rb.Text, out int uiVal))
+                        {
+                            positions[i] = UiToInternal(uiVal);
+                        }
                         break;
                     }
                 }
@@ -439,7 +446,6 @@ namespace Gothic_Remake_Breaker
 
         private void ReadEffects(LockConfig config)
         {
-            // Сбрасываем все в None
             for (int src = 0; src < config.PlateCount; src++)
             {
                 for (int tgt = 0; tgt < config.PlateCount; tgt++)
@@ -448,7 +454,6 @@ namespace Gothic_Remake_Breaker
                 }
             }
 
-            // Считываем напрямую из кэша _effectRows по индексу источника
             for (int src = 0; src < config.PlateCount; src++)
             {
                 var row = _effectRows[src];
@@ -460,8 +465,11 @@ namespace Gothic_Remake_Breaker
                         {
                             if (cb is CheckBox check && check.Tag is EffectTag tag)
                             {
-                                if (check.Checked)
+                                // ПРОВЕРКА ГРАНИЦ
+                                if (tag.Source < config.PlateCount && tag.Target < config.PlateCount && check.Checked)
+                                {
                                     config.Effects[tag.Source, tag.Target] = tag.Type;
+                                }
                             }
                         }
                     }
@@ -482,7 +490,15 @@ namespace Gothic_Remake_Breaker
                         {
                             if (cb is CheckBox check && check.Tag is EffectTag tag)
                             {
-                                check.Checked = (config.Effects[tag.Source, tag.Target] == tag.Type);
+                                // ПРОВЕРКА ГРАНИЦ
+                                if (tag.Source < config.PlateCount && tag.Target < config.PlateCount)
+                                {
+                                    check.Checked = (config.Effects[tag.Source, tag.Target] == tag.Type);
+                                }
+                                else
+                                {
+                                    check.Checked = false;
+                                }
                             }
                         }
                     }
@@ -492,35 +508,36 @@ namespace Gothic_Remake_Breaker
 
         private void buttonSolve_Click(object sender, EventArgs e)
         {
-            int count = GetSelectedPlateCount();
-            var config = new LockConfig
+            try
             {
-                PlateCount = count,
-                StartPositions = GetStartPositions(),
-                Effects = new EffectType[count, count]
-            };
+                int count = GetSelectedPlateCount();
+                var config = new LockConfig
+                {
+                    PlateCount = count,
+                    StartPositions = GetStartPositions(),
+                    Effects = new EffectType[count, count]
+                };
 
-            ReadEffects(config);
+                ReadEffects(config);
 
-            var solver = new LockpickSolver();
-            var result = solver.Solve(config);
-            textBoxResult.Text = solver.FormatSolution(result, "Результат");
+                var solver = new LockpickSolver();
+                var result = solver.Solve(config);
+                textBoxResult.Text = solver.FormatSolution(result, "Результат");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при решении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
-
-        // ======================== АВТО-ОТПРАВКА WASD ========================
 
         private struct ParsedMove
         {
-            public int PlateIndex;   // 1-based (как в выводе)
+            public int PlateIndex;
             public Direction Direction;
             public int Count;
         }
 
-        /// <summary>
-        /// Парсит текст результата решателя в список ходов
-        /// Формат: " N. Пластина X -> Влево/Вправо [xN]"
-        /// </summary>
-        private static List<ParsedMove> ParseResult(string text)
+        private static List<ParsedMove> ParseResult(string text, int maxPlates)
         {
             var moves = new List<ParsedMove>();
             if (string.IsNullOrWhiteSpace(text)) return moves;
@@ -528,139 +545,155 @@ namespace Gothic_Remake_Breaker
             foreach (var line in text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var trimmed = line.Trim();
-                // Ищем "Пластина N"
                 var plateMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"Пластина\s+(\d+)");
                 if (!plateMatch.Success) continue;
 
-                int plate = int.Parse(plateMatch.Groups[1].Value);
+                if (!int.TryParse(plateMatch.Groups[1].Value, out int plate)) continue;
 
-                // Определяем направление
+                // ПРОВЕРКА ГРАНИЦ
+                if (plate < 1 || plate > maxPlates) continue;
+
                 Direction dir = Direction.Left;
                 if (trimmed.Contains("Вправо")) dir = Direction.Right;
 
-                // Считываем множитель xN
                 int count = 1;
                 var countMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"x(\d+)");
-                if (countMatch.Success)
-                    count = int.Parse(countMatch.Groups[1].Value);
+                if (countMatch.Success && int.TryParse(countMatch.Groups[1].Value, out int parsedCount))
+                    count = Math.Max(1, parsedCount);
 
                 moves.Add(new ParsedMove { PlateIndex = plate, Direction = dir, Count = count });
             }
             return moves;
         }
 
-        /// <summary>
-        /// Отправляет одно нажатие клавиши (keydown + keyup) через SendInput
-        /// </summary>
         private static void SendVirtualKey(byte vk)
         {
-            INPUT[] inputs = new INPUT[2];
-
-            // KeyDown
-            inputs[0].type = INPUT_KEYBOARD;
-            inputs[0].u.ki = new KEYBDINPUT
+            try
             {
-                wVk = vk,
-                wScan = MapVirtualKey(vk, 0),
-                dwFlags = 0,
-                time = 0,
-                dwExtraInfo = IntPtr.Zero
-            };
+                INPUT[] inputs = new INPUT[2];
 
-            // KeyUp
-            inputs[1].type = INPUT_KEYBOARD;
-            inputs[1].u.ki = new KEYBDINPUT
+                inputs[0].type = INPUT_KEYBOARD;
+                inputs[0].u.ki = new KEYBDINPUT
+                {
+                    wVk = vk,
+                    wScan = MapVirtualKey(vk, 0),
+                    dwFlags = 0,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero
+                };
+
+                inputs[1].type = INPUT_KEYBOARD;
+                inputs[1].u.ki = new KEYBDINPUT
+                {
+                    wVk = vk,
+                    wScan = MapVirtualKey(vk, 0),
+                    dwFlags = KEYEVENTF_KEYUP,
+                    time = 0,
+                    dwExtraInfo = IntPtr.Zero
+                };
+
+                uint sent = SendInput(2, inputs, Marshal.SizeOf<INPUT>());
+
+                if (sent == 0)
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    System.Diagnostics.Debug.WriteLine($"SendInput failed! Error code: {error}");
+                }
+            }
+            catch (Exception ex)
             {
-                wVk = vk,
-                wScan = MapVirtualKey(vk, 0),
-                dwFlags = KEYEVENTF_KEYUP,
-                time = 0,
-                dwExtraInfo = IntPtr.Zero
-            };
-
-            uint sent = SendInput(2, inputs, Marshal.SizeOf<INPUT>());
-
-            // Для отладки — если что-то пошло не так, увидим в Output Window
-            if (sent == 0)
-            {
-                int error = Marshal.GetLastWin32Error();
-                System.Diagnostics.Debug.WriteLine($"SendInput failed! Error code: {error}");
+                System.Diagnostics.Debug.WriteLine($"SendVirtualKey exception: {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Запускает авто-отправку WASD на основе результата решателя
-        /// </summary>
         private void StartAutoPlay()
         {
-            // Считываем актуальные значения задержек из UI
-            ApplyDelayFromUI();
-
-            string resultText = textBoxResult.Text;
-            if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains("Решено"))
+            try
             {
-                MessageBox.Show("Сначала решите замок!", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                ApplyDelayFromUI();
+
+                string resultText = textBoxResult.Text;
+                if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains("Решено"))
+                {
+                    MessageBox.Show("Сначала решите замок!", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                int maxPlates = GetSelectedPlateCount();
+                var moves = ParseResult(resultText, maxPlates);
+                if (moves.Count == 0)
+                {
+                    MessageBox.Show("Не удалось распознать ходы в результате.", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                var worker = new Thread(() => ExecuteAutoPlay(moves, maxPlates))
+                {
+                    IsBackground = true
+                };
+                worker.Start();
             }
-
-            var moves = ParseResult(resultText);
-            if (moves.Count == 0)
+            catch (Exception ex)
             {
-                MessageBox.Show("Не удалось распознать ходы в результате.", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                MessageBox.Show($"Ошибка запуска авто-игры: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
-            // Запускаем в отдельном потоке, чтобы не блокировать UI
-            var worker = new Thread(() => ExecuteAutoPlay(moves))
-            {
-                IsBackground = true
-            };
-            worker.Start();
         }
 
-        /// <summary>
-        /// Выполняет последовательность WASD-нажатий
-        /// </summary>
-        private void ExecuteAutoPlay(List<ParsedMove> moves)
+        private void ExecuteAutoPlay(List<ParsedMove> moves, int maxPlates)
         {
-            // Коды виртуальных клавиш
-            const byte VK_R = 0x52;
-            const byte VK_W = 0x57;
-            const byte VK_S = 0x53;
-            const byte VK_A = 0x41;
-            const byte VK_D = 0x44;
-
-            int currentPlate = 1; // Начинаем с пластины 1
-
-            Thread.Sleep(StartDelayMs); // Даём время переключиться на игру
-
-            // Нажимаем R в начале
-            SendVirtualKey(VK_R); // R - сброс
-            Thread.Sleep(PlateSwitchDelayMs);
-
-            foreach (var move in moves)
+            try
             {
-                // Перемещаем курсор на целевую пластину
-                while (currentPlate < move.PlateIndex)
-                {
-                    SendVirtualKey(VK_W); // W — следующая пластина
-                    Thread.Sleep(PlateSwitchDelayMs);
-                    currentPlate++;
-                }
-                while (currentPlate > move.PlateIndex)
-                {
-                    SendVirtualKey(VK_S); // S — предыдущая пластина
-                    Thread.Sleep(PlateSwitchDelayMs);
-                    currentPlate--;
-                }
+                const byte VK_R = 0x52;
+                const byte VK_W = 0x57;
+                const byte VK_S = 0x53;
+                const byte VK_A = 0x41;
+                const byte VK_D = 0x44;
 
-                // Выполняем движение пластины
-                byte moveKey = move.Direction == Direction.Left ? VK_A : VK_D;
-                for (int i = 0; i < move.Count; i++)
+                int currentPlate = 1;
+
+                Thread.Sleep(StartDelayMs);
+
+                SendVirtualKey(VK_R);
+                Thread.Sleep(PlateSwitchDelayMs);
+
+                foreach (var move in moves)
                 {
-                    SendVirtualKey(moveKey);
-                    Thread.Sleep(MoveDelayMs);
+                    // ПРОВЕРКА ГРАНИЦ
+                    if (move.PlateIndex < 1 || move.PlateIndex > maxPlates) continue;
+
+                    int maxIterations = maxPlates * 2; // Защита от бесконечного цикла
+                    int iterations = 0;
+
+                    while (currentPlate < move.PlateIndex && iterations < maxIterations)
+                    {
+                        SendVirtualKey(VK_W);
+                        Thread.Sleep(PlateSwitchDelayMs);
+                        currentPlate++;
+                        iterations++;
+                    }
+
+                    iterations = 0;
+                    while (currentPlate > move.PlateIndex && iterations < maxIterations)
+                    {
+                        SendVirtualKey(VK_S);
+                        Thread.Sleep(PlateSwitchDelayMs);
+                        currentPlate--;
+                        iterations++;
+                    }
+
+                    byte moveKey = move.Direction == Direction.Left ? VK_A : VK_D;
+                    for (int i = 0; i < move.Count; i++)
+                    {
+                        SendVirtualKey(moveKey);
+                        Thread.Sleep(MoveDelayMs);
+                    }
                 }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ExecuteAutoPlay exception: {ex.Message}");
+                // Опционально: показать сообщение пользователю
+                // this.Invoke((Action)(() => MessageBox.Show($"Ошибка авто-игры: {ex.Message}")));
             }
         }
     }
@@ -672,13 +705,12 @@ namespace Gothic_Remake_Breaker
     {
         public int PlateCount { get; set; }
         public int[] StartPositions { get; set; }
-        // Множество [source, target]. Как движение source влияет на target.
         public EffectType[,] Effects { get; set; }
     }
 
     public class MoveGroup
     {
-        public int PlateIndex { get; set; } // 0-based
+        public int PlateIndex { get; set; }
         public Direction Direction { get; set; }
         public int Count { get; set; }
     }
@@ -695,7 +727,7 @@ namespace Gothic_Remake_Breaker
     {
         private const int MIN_POS = -3;
         private const int MAX_POS = 3;
-        private const int TIMEOUT_MS = 15000; // 15 секунд, как в оригинале
+        private const int TIMEOUT_MS = 15000;
 
         public SolverResult Solve(LockConfig config, bool fewerSwitches = true)
         {
@@ -705,10 +737,9 @@ namespace Gothic_Remake_Breaker
                 return SolveShortestMoves(config);
         }
 
-        // Применяем одно движение к массиву состояний
         private int[] ApplyMove(int[] current, int plateIndex, Direction dir, LockConfig config)
         {
-            int delta = dir == Direction.Left ? 1 : -1; // В оригинале Left = +1, Right = -1
+            int delta = dir == Direction.Left ? 1 : -1;
             int[] next = new int[config.PlateCount];
             Array.Copy(current, next, config.PlateCount);
 
@@ -723,7 +754,6 @@ namespace Gothic_Remake_Breaker
                 else if (effect == EffectType.Opposite) next[target] -= delta;
             }
 
-            // Проверка границ: если хоть одна пластина вылезла за -3..+3, ход невозможен
             foreach (var val in next)
             {
                 if (val < MIN_POS || val > MAX_POS) return null;
@@ -731,9 +761,6 @@ namespace Gothic_Remake_Breaker
             return next;
         }
 
-        // Быстрое хеширование состояния в одно число (битовый сдвиг)
-        // Значения от -3 до 3. Прибавляем 3, получаем 0..6 (занимает 3 бита).
-        // 7 пластин * 3 бита = 21 бит, идеально помещается в int.
         private int GetStateKey(int[] values)
         {
             int key = 0;
@@ -838,11 +865,10 @@ namespace Gothic_Remake_Breaker
                     {
                         int[] chainValues = currentValues;
 
-                        // Пытаемся сделать серию ходов одной пластиной в одну сторону
                         for (int count = 1; ; count++)
                         {
                             chainValues = ApplyMove(chainValues, plate, dir, config);
-                            if (chainValues == null) break; // Уперлись в границу
+                            if (chainValues == null) break;
 
                             int key = GetStateKey(chainValues);
                             if (seen.ContainsKey(key)) continue;
@@ -868,7 +894,6 @@ namespace Gothic_Remake_Breaker
             return new SolverResult { Success = false, ErrorMessage = "Решение не найдено." };
         }
 
-        // Форматирование ответа для вывода в UI
         public string FormatSolution(SolverResult result, string lockName = "")
         {
             if (result.Timeout) return $"Ошибка: {result.ErrorMessage}";
@@ -885,7 +910,6 @@ namespace Gothic_Remake_Breaker
                 var m = result.Moves[i];
                 string dir = m.Direction == Direction.Left ? "Влево" : "Вправо";
                 string countStr = m.Count > 1 ? $" x{m.Count}" : "";
-                // В UI показываем пластины с 1, как в оригинале
                 sb.AppendLine($"{(i + 1).ToString().PadLeft(2)}. Пластина {m.PlateIndex + 1} -> {dir}{countStr}");
             }
 
@@ -893,11 +917,10 @@ namespace Gothic_Remake_Breaker
         }
     }
 
-    // Тег для чекбоксов эффектов
     internal class EffectTag
     {
-        public int Source;   // пластина-источник (0-based)
-        public int Target;   // пластина-цель (0-based)
-        public EffectType Type; // Same или Opposite
+        public int Source;
+        public int Target;
+        public EffectType Type;
     }
 }
