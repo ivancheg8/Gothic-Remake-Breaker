@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,4 +117,110 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="FormText" xml:space="preserve">
+    <value>Gothic Remake Breaker</value>
+  </data>
+  <data name="labelPlateCount" xml:space="preserve">
+    <value>Количество пластин:</value>
+  </data>
+  <data name="labelStartPositions" xml:space="preserve">
+    <value>Начальная позиция для каждой пластины:</value>
+  </data>
+  <data name="buttonSolve" xml:space="preserve">
+    <value>Решить</value>
+  </data>
+  <data name="buttonClear" xml:space="preserve">
+    <value>Сброс</value>
+  </data>
+  <data name="groupBoxDelaySettingsText" xml:space="preserve">
+    <value>Настройки задержек (мс)</value>
+  </data>
+  <data name="labelPlateSwitchDelay" xml:space="preserve">
+    <value>Задержка переключения между пластинами (W/S):</value>
+  </data>
+  <data name="labelMoveDelay" xml:space="preserve">
+    <value>Задержка движения пластины (A/D):</value>
+  </data>
+  <data name="labelRdelay" xml:space="preserve">
+    <value>Задержка после нажатия</value>
+  </data>
+  <data name="checkBoxResetText" xml:space="preserve">
+    <value>Нажимать "Сброс" (R)</value>
+  </data>
+  <data name="_chkEnableHotkeyText" xml:space="preserve">
+    <value>Отслеживание нажатия F4</value>
+  </data>
+  <data name="checkBoxOntopText" xml:space="preserve">
+    <value>Поверх всех окон</value>
+  </data>
+  <data name="label1" xml:space="preserve">
+    <value>левые чекбоксы = противоположное двжение, правые чекбоксы = движение совпадает</value>
+  </data>
+  <data name="label2" xml:space="preserve">
+    <value>Эффекты:</value>
+  </data>
+  <data name="languageText" xml:space="preserve">
+    <value>Язык</value>
+  </data>
+  <data name="comboBoxLanguageItems" xml:space="preserve">
+    <value>EN
+RU</value>
+  </data>
+  <data name="hotkeyRegisterError" xml:space="preserve">
+    <value>Не удалось зарегистрировать глобальный хоткей F4.
+Код ошибки: {0}
+
+Возможно, F4 уже занят другой программой.</value>
+  </data>
+  <data name="hotkeyRegisterErrorTitle" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="firstSolveWarning" xml:space="preserve">
+    <value>Сначала решите замок!</value>
+  </data>
+  <data name="autoPlayTitle" xml:space="preserve">
+    <value>Авто-игра</value>
+  </data>
+  <data name="noMovesWarning" xml:space="preserve">
+    <value>Не удалось распознать ходы в результате.</value>
+  </data>
+  <data name="errorTitle" xml:space="preserve">
+    <value>Ошибка</value>
+  </data>
+  <data name="solveErrorPrefix" xml:space="preserve">
+    <value>Ошибка при решении:</value>
+  </data>
+  <data name="autoPlayErrorPrefix" xml:space="preserve">
+    <value>Ошибка запуска авто-игры:</value>
+  </data>
+  <data name="alreadyOpen" xml:space="preserve">
+    <value>Замок уже открык</value>
+  </data>
+  <data name="alreadyOpenSuffix" xml:space="preserve">
+    <value>(все пластины в центре).</value>
+  </data>
+  <data name="solvedXMoves" xml:space="preserve">
+    <value>Решено за {0} ходов.</value>
+  </data>
+  <data name="timeoutError" xml:space="preserve">
+    <value>Превышено время ожидания.</value>
+  </data>
+  <data name="noSolutionError" xml:space="preserve">
+    <value>Решение не найдено.</value>
+  </data>
+  <data name="solutionErrorPrefix" xml:space="preserve">
+    <value>Ошибка:</value>
+  </data>
+  <data name="plateMoveLeft" xml:space="preserve">
+    <value>Влево</value>
+  </data>
+  <data name="plateMoveRight" xml:space="preserve">
+    <value>Вправо</value>
+  </data>
+  <data name="resultPrefix" xml:space="preserve">
+    <value>Результат</value>
+  </data>
+  <data name="plateLabelFormat" xml:space="preserve">
+    <value>Plate {0}</value>
+  </data>
 </root>

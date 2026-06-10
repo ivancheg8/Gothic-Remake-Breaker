@@ -18,7 +18,6 @@
 
         private void InitializeComponent()
         {
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             this.labelPlateCount = new System.Windows.Forms.Label();
             this.panelPlateCountChecks = new System.Windows.Forms.FlowLayoutPanel();
             this.chkPlateCount2 = new System.Windows.Forms.CheckBox();
@@ -47,6 +46,8 @@
             this.checkBoxOntop = new System.Windows.Forms.CheckBox();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.comboBoxLanguage = new System.Windows.Forms.ComboBox();
+            this.language = new System.Windows.Forms.Label();
             this.panelPlateCountChecks.SuspendLayout();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
@@ -400,11 +401,35 @@
             this.label2.TabIndex = 15;
             this.label2.Text = "Эффекты:";
             // 
+            // comboBoxLanguage
+            // 
+            this.comboBoxLanguage.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.comboBoxLanguage.FormattingEnabled = true;
+            this.comboBoxLanguage.Items.AddRange(new object[] {
+            "EN",
+            "RU"});
+            this.comboBoxLanguage.Location = new System.Drawing.Point(940, 14);
+            this.comboBoxLanguage.Name = "comboBoxLanguage";
+            this.comboBoxLanguage.Size = new System.Drawing.Size(55, 24);
+            this.comboBoxLanguage.TabIndex = 16;
+            // 
+            // language
+            // 
+            this.language.AutoSize = true;
+            this.language.Font = new System.Drawing.Font("Microsoft Sans Serif", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(204)));
+            this.language.Location = new System.Drawing.Point(864, 17);
+            this.language.Name = "language";
+            this.language.Size = new System.Drawing.Size(42, 17);
+            this.language.TabIndex = 17;
+            this.language.Text = "Язык";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1013, 615);
+            this.Controls.Add(this.language);
+            this.Controls.Add(this.comboBoxLanguage);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.checkBoxOntop);
@@ -418,7 +443,6 @@
             this.Controls.Add(this.labelStartPositions);
             this.Controls.Add(this.panelPlateCountChecks);
             this.Controls.Add(this.labelPlateCount);
-            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Form1";
             this.Text = "Gothic Remake Breaker";
             this.panelPlateCountChecks.ResumeLayout(false);
@@ -465,5 +489,7 @@
         private System.Windows.Forms.NumericUpDown Rdelay;
         private System.Windows.Forms.Label labelRdelay;
         private System.Windows.Forms.CheckBox checkBoxReset;
+        private System.Windows.Forms.ComboBox comboBoxLanguage;
+        private System.Windows.Forms.Label language;
     }
 }

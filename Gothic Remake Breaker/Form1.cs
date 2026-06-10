@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -22,8 +23,10 @@ namespace Gothic_Remake_Breaker
 
         private int _plateSwitchDelayMs = 300;
         private int _moveDelayMs = 300;
-        private int _rdelayMs = 1000;
+        private int _rdelayMs = 1500;
         private const int StartDelayMs = 300;
+
+        private string _currentLang = "EN";
 
         public int PlateSwitchDelayMs => _plateSwitchDelayMs;
         public int MoveDelayMs => _moveDelayMs;
@@ -133,6 +136,116 @@ namespace Gothic_Remake_Breaker
             GenerateEffectControls(2);
             SyncUIFromDelays();
             RegisterGlobalHotkey();
+
+           // Загрузка иконки из встроенных ресурсов
+            try
+            {
+                var stream = typeof(Form1).Assembly.GetManifestResourceStream("Gothic_Remake_Breaker.Gothic_1.ico");
+                if (stream != null)
+                    this.Icon = new System.Drawing.Icon(stream);
+            }
+            catch { }
+
+            comboBoxLanguage.SelectedIndex = 0; // EN
+            Strings.SetCulture(_currentLang);
+
+            comboBoxLanguage.SelectedIndexChanged += ComboBoxLanguage_SelectedIndexChanged;
+            ApplyLanguage();
+        }
+
+        private void ComboBoxLanguage_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (comboBoxLanguage.SelectedItem != null)
+            {
+                _currentLang = comboBoxLanguage.SelectedItem.ToString();
+                Strings.SetCulture(_currentLang);
+                ApplyLanguage();
+            }
+        }
+
+        private void ApplyLanguage()
+        {
+            // Form text
+            this.Text = Strings.GetString("FormText");
+
+            // Labels
+            labelPlateCount.Text = Strings.GetString("labelPlateCount");
+            labelStartPositions.Text = Strings.GetString("labelStartPositions");
+            label1.Text = Strings.GetString("label1");
+            label2.Text = Strings.GetString("label2");
+            language.Text = Strings.GetString("languageText");
+
+            // Buttons
+            buttonSolve.Text = Strings.GetString("buttonSolve");
+            buttonClear.Text = Strings.GetString("buttonClear");
+
+            // GroupBoxes
+            groupBoxDelaySettings.Text = Strings.GetString("groupBoxDelaySettingsText");
+
+            // Delay settings
+            labelPlateSwitchDelay.Text = Strings.GetString("labelPlateSwitchDelay");
+            labelMoveDelay.Text = Strings.GetString("labelMoveDelay");
+            labelRdelay.Text = Strings.GetString("labelRdelay");
+            checkBoxReset.Text = Strings.GetString("checkBoxResetText");
+
+            // Checkboxes
+            _chkEnableHotkey.Text = Strings.GetString("_chkEnableHotkeyText");
+            checkBoxOntop.Text = Strings.GetString("checkBoxOntopText");
+
+            // Plate labels in CreateAllControlsOnce
+            for (int i = 0; i < MAX_PLATES; i++)
+            {
+                var platePanel = _platePanels[i] as FlowLayoutPanel;
+                if (platePanel != null && platePanel.Controls.Count > 0)
+                {
+                    var label = platePanel.Controls[0] as Label;
+                    if (label != null)
+                        label.Text = string.Format(Strings.GetString("plateLabelFormat"), i + 1);
+                }
+            }
+
+            // Effect row labels
+            for (int src = 0; src < MAX_PLATES; src++)
+            {
+                var row = _effectRows[src];
+                if (row != null)
+                {
+                    foreach (Control child in row.Controls)
+                    {
+                        if (child is Label plateLabel && plateLabel.Text.StartsWith("Plate"))
+                        {
+                            plateLabel.Text = string.Format(Strings.GetString("plateLabelFormat"), src + 1);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Re-apply result text if there's a solution
+            bool hasSolution = textBoxResult.Text.Contains(Strings.GetString("solvedXMoves"));
+            if (!string.IsNullOrWhiteSpace(textBoxResult.Text) && hasSolution)
+            {
+                int count = GetSelectedPlateCount();
+                var config = new LockConfig
+                {
+                    PlateCount = count,
+                    StartPositions = GetStartPositions(),
+                    Effects = new EffectType[count, count]
+                };
+                ReadEffects(config);
+                var solver = new LockpickSolver();
+                var result = solver.Solve(config);
+                string plateLabel = _currentLang == "EN" ? "Plate" : "Пластина";
+                textBoxResult.Text = solver.FormatSolution(result,
+                    Strings.GetString("resultPrefix"),
+                    Strings.GetString("solvedXMoves"),
+                    Strings.GetString("solutionErrorPrefix"),
+                    Strings.GetString("alreadyOpen"),
+                    Strings.GetString("alreadyOpenSuffix"),
+                    Strings.GetString("plateMoveLeft"),
+                    Strings.GetString("plateMoveRight"),
+                    plateLabel);
+            }
         }
 
         private void RegisterGlobalHotkey()
@@ -144,10 +257,8 @@ namespace Gothic_Remake_Breaker
                 int err = Marshal.GetLastWin32Error();
                 System.Diagnostics.Debug.WriteLine($"RegisterHotKey failed! Error: {err}");
                 MessageBox.Show(
-                    $"Не удалось зарегистрировать глобальный хоткей F4.\n" +
-                    $"Код ошибки: {err}\n\n" +
-                    "Возможно, F4 уже занят другой программой.",
-                    "Ошибка",
+                    string.Format(Strings.GetString("hotkeyRegisterError"), err),
+                    Strings.GetString("hotkeyRegisterErrorTitle"),
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Warning);
             }
@@ -531,11 +642,20 @@ namespace Gothic_Remake_Breaker
 
                 var solver = new LockpickSolver();
                 var result = solver.Solve(config);
-                textBoxResult.Text = solver.FormatSolution(result, "Результат");
+                string plateLabel = _currentLang == "EN" ? "Plate" : "Пластина";
+                textBoxResult.Text = solver.FormatSolution(result,
+                    Strings.GetString("resultPrefix"),
+                    Strings.GetString("solvedXMoves"),
+                    Strings.GetString("solutionErrorPrefix"),
+                    Strings.GetString("alreadyOpen"),
+                    Strings.GetString("alreadyOpenSuffix"),
+                    Strings.GetString("plateMoveLeft"),
+                    Strings.GetString("plateMoveRight"),
+                    plateLabel);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка при решении: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"{Strings.GetString("solveErrorPrefix")} {ex.Message}", Strings.GetString("errorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -546,15 +666,18 @@ namespace Gothic_Remake_Breaker
             public int Count;
         }
 
-        private static List<ParsedMove> ParseResult(string text, int maxPlates)
+        private List<ParsedMove> ParseResult(string text, int maxPlates)
         {
             var moves = new List<ParsedMove>();
             if (string.IsNullOrWhiteSpace(text)) return moves;
 
+            string plateKeyword = _currentLang == "EN" ? "Plate" : "Пластина";
+            string rightKeyword = Strings.GetString("plateMoveRight");
+
             foreach (var line in text.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var trimmed = line.Trim();
-                var plateMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"Пластина\s+(\d+)");
+                var plateMatch = System.Text.RegularExpressions.Regex.Match(trimmed, $@"{plateKeyword}\s+(\d+)");
                 if (!plateMatch.Success) continue;
 
                 if (!int.TryParse(plateMatch.Groups[1].Value, out int plate)) continue;
@@ -563,7 +686,7 @@ namespace Gothic_Remake_Breaker
                 if (plate < 1 || plate > maxPlates) continue;
 
                 Direction dir = Direction.Left;
-                if (trimmed.Contains("Вправо")) dir = Direction.Right;
+                if (trimmed.Contains(rightKeyword)) dir = Direction.Right;
 
                 int count = 1;
                 var countMatch = System.Text.RegularExpressions.Regex.Match(trimmed, @"x(\d+)");
@@ -622,9 +745,9 @@ namespace Gothic_Remake_Breaker
                 ApplyDelayFromUI();
 
                 string resultText = textBoxResult.Text;
-                if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains("Решено"))
+                if (string.IsNullOrWhiteSpace(resultText) || !resultText.Contains(Strings.GetString("solvedXMoves")))
                 {
-                    MessageBox.Show("Сначала решите замок!", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(Strings.GetString("firstSolveWarning"), Strings.GetString("autoPlayTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -632,7 +755,7 @@ namespace Gothic_Remake_Breaker
                 var moves = ParseResult(resultText, maxPlates);
                 if (moves.Count == 0)
                 {
-                    MessageBox.Show("Не удалось распознать ходы в результате.", "Авто-игра", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(Strings.GetString("noMovesWarning"), Strings.GetString("autoPlayTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
@@ -644,7 +767,7 @@ namespace Gothic_Remake_Breaker
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Ошибка запуска авто-игры: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"{Strings.GetString("autoPlayErrorPrefix")} {ex.Message}", Strings.GetString("errorTitle"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -711,6 +834,101 @@ namespace Gothic_Remake_Breaker
                 // Опционально: показать сообщение пользователю
                 // this.Invoke((Action)(() => MessageBox.Show($"Ошибка авто-игры: {ex.Message}")));
             }
+        }
+    }
+
+    internal static class Strings
+    {
+        private static string _culture = "RU";
+        private static Dictionary<string, string> _ru = new Dictionary<string, string>();
+        private static Dictionary<string, string> _en = new Dictionary<string, string>();
+
+        static Strings()
+        {
+            // RU
+            _ru["FormText"] = "Gothic Remake Breaker";
+            _ru["labelPlateCount"] = "Количество пластин:";
+            _ru["labelStartPositions"] = "Начальная позиция для каждой пластины:";
+            _ru["buttonSolve"] = "Решить";
+            _ru["buttonClear"] = "Сброс";
+            _ru["groupBox1Text"] = "Эффекты";
+            _ru["groupBox2Text"] = "Пластины";
+            _ru["groupBoxDelaySettingsText"] = "Настройки задержек (мс)";
+            _ru["labelPlateSwitchDelay"] = "Задержка переключения между пластинами (W/S):";
+            _ru["labelMoveDelay"] = "Задержка движения пластины (A/D):";
+            _ru["labelRdelay"] = "Задержка после нажатия";
+            _ru["checkBoxResetText"] = "Нажимать \"Сброс\" (R)";
+            _ru["_chkEnableHotkeyText"] = "Отслеживание нажатия F4";
+            _ru["checkBoxOntopText"] = "Поверх всех окон";
+            _ru["label1"] = "левые чекбоксы = противоположное двжение, правые чекбоксы = движение совпадает";
+            _ru["label2"] = "Эффекты:";
+            _ru["languageText"] = "Язык";
+            _ru["hotkeyRegisterError"] = "Не удалось зарегистрировать глобальный хоткей F4.\nКод ошибки: {0}\n\nВозможно, F4 уже занят другой программой.";
+            _ru["hotkeyRegisterErrorTitle"] = "Ошибка";
+            _ru["firstSolveWarning"] = "Сначала решите замок!";
+            _ru["autoPlayTitle"] = "Авто-игра";
+            _ru["noMovesWarning"] = "Не удалось распознать ходы в результате.";
+            _ru["errorTitle"] = "Ошибка";
+            _ru["solveErrorPrefix"] = "Ошибка при решении:";
+            _ru["autoPlayErrorPrefix"] = "Ошибка запуска авто-игры:";
+            _ru["alreadyOpen"] = "Замок уже открыт";
+            _ru["alreadyOpenSuffix"] = "(все пластины в центре).";
+            _ru["solvedXMoves"] = "Решено за {0} ходов.";
+            _ru["timeoutError"] = "Превышено время ожидания.";
+            _ru["noSolutionError"] = "Решение не найдено.";
+            _ru["solutionErrorPrefix"] = "Ошибка:";
+            _ru["plateMoveLeft"] = "Влево";
+            _ru["plateMoveRight"] = "Вправо";
+            _ru["resultPrefix"] = "Результат";
+            _ru["plateLabelFormat"] = "Plate {0}";
+
+            // EN
+            _en["FormText"] = "Gothic Remake Breaker";
+            _en["labelPlateCount"] = "Number of plates:";
+            _en["labelStartPositions"] = "Starting position for each plate:";
+            _en["buttonSolve"] = "Solve";
+            _en["buttonClear"] = "Reset";
+            _en["groupBox1Text"] = "Effects";
+            _en["groupBox2Text"] = "Plates";
+            _en["groupBoxDelaySettingsText"] = "Delay Settings (ms)";
+            _en["labelPlateSwitchDelay"] = "Plate switch delay (W/S):";
+            _en["labelMoveDelay"] = "Plate move delay (A/D):";
+            _en["labelRdelay"] = "Post-press delay";
+            _en["checkBoxResetText"] = "Press \"Reset\" (R)";
+            _en["_chkEnableHotkeyText"] = "Tracking F4 key presses";
+            _en["checkBoxOntopText"] = "On top of all windows";
+            _en["label1"] = "left checkboxes = opposite movement, right checkboxes = same movement";
+            _en["label2"] = "Effects:";
+            _en["languageText"] = "Language";
+            _en["hotkeyRegisterError"] = "Failed to register global hotkey F4.\nError code: {0}\n\nF4 may already be in use by another program.";
+            _en["hotkeyRegisterErrorTitle"] = "Error";
+            _en["firstSolveWarning"] = "Solve the lock first!";
+            _en["autoPlayTitle"] = "Auto-play";
+            _en["noMovesWarning"] = "Could not recognize moves in the result.";
+            _en["errorTitle"] = "Error";
+            _en["solveErrorPrefix"] = "Error while solving:";
+            _en["autoPlayErrorPrefix"] = "Error starting auto-play:";
+            _en["alreadyOpen"] = "Lock already open";
+            _en["alreadyOpenSuffix"] = "(all plates in center).";
+            _en["solvedXMoves"] = "Solved in {0} moves.";
+            _en["timeoutError"] = "Timeout exceeded.";
+            _en["noSolutionError"] = "No solution found.";
+            _en["solutionErrorPrefix"] = "Error:";
+            _en["plateMoveLeft"] = "Left";
+            _en["plateMoveRight"] = "Right";
+            _en["resultPrefix"] = "Result";
+            _en["plateLabelFormat"] = "Plate {0}";
+        }
+
+        public static void SetCulture(string culture)
+        {
+            _culture = culture;
+        }
+
+        public static string GetString(string key)
+        {
+            var dict = _culture == "EN" ? _en : _ru;
+            return dict.ContainsKey(key) ? dict[key] : key;
         }
     }
 
@@ -824,7 +1042,7 @@ namespace Gothic_Remake_Breaker
             while (queue.Count > 0)
             {
                 if (sw.ElapsedMilliseconds > TIMEOUT_MS)
-                    return new SolverResult { Timeout = true, ErrorMessage = "Превышено время ожидания." };
+                    return new SolverResult { Timeout = true, ErrorMessage = "" };
 
                 int currentIndex = queue.Dequeue();
                 var currentValues = states[currentIndex];
@@ -851,7 +1069,7 @@ namespace Gothic_Remake_Breaker
                     }
                 }
             }
-            return new SolverResult { Success = false, ErrorMessage = "Решение не найдено." };
+            return new SolverResult { Success = false, ErrorMessage = "" };
         }
 
         private SolverResult SolveFewerPlateSwitches(LockConfig config)
@@ -870,7 +1088,7 @@ namespace Gothic_Remake_Breaker
             while (queue.Count > 0)
             {
                 if (sw.ElapsedMilliseconds > TIMEOUT_MS)
-                    return new SolverResult { Timeout = true, ErrorMessage = "Превышено время ожидания." };
+                    return new SolverResult { Timeout = true, ErrorMessage = "" };
 
                 int currentIndex = queue.Dequeue();
                 var currentValues = states[currentIndex];
@@ -907,26 +1125,26 @@ namespace Gothic_Remake_Breaker
                     }
                 }
             }
-            return new SolverResult { Success = false, ErrorMessage = "Решение не найдено." };
+            return new SolverResult { Success = false, ErrorMessage = "" };
         }
 
-        public string FormatSolution(SolverResult result, string lockName = "")
+        public string FormatSolution(SolverResult result, string lockName = "", string solvedText = "", string errorText = "", string alreadyOpenText = "", string alreadyOpenSuffix = "", string plateMoveLeft = "", string plateMoveRight = "", string plateLabel = "Plate")
         {
-            if (result.Timeout) return $"Ошибка: {result.ErrorMessage}";
-            if (!result.Success) return $"Ошибка: {result.ErrorMessage}";
-            if (result.Moves.Count == 0) return "Замок уже открыт\r\n(все пластины в центре).";
+            if (result.Timeout) return $"{errorText} {result.ErrorMessage}";
+            if (!result.Success) return $"{errorText} {result.ErrorMessage}";
+            if (result.Moves.Count == 0) return $"{alreadyOpenText}\r\n{alreadyOpenSuffix}";
 
             var sb = new StringBuilder();
             string prefix = string.IsNullOrEmpty(lockName) ? "" : $"{lockName} — ";
-            sb.AppendLine($"{prefix}Решено за {result.Moves.Sum(m => m.Count)} ходов.");
+            sb.AppendLine($"{prefix}{string.Format(solvedText, result.Moves.Sum(m => m.Count))}");
             sb.AppendLine();
 
             for (int i = 0; i < result.Moves.Count; i++)
             {
                 var m = result.Moves[i];
-                string dir = m.Direction == Direction.Left ? "Влево" : "Вправо";
+                string dir = m.Direction == Direction.Left ? plateMoveLeft : plateMoveRight;
                 string countStr = m.Count > 1 ? $" x{m.Count}" : "";
-                sb.AppendLine($"{(i + 1).ToString().PadLeft(2)}. Пластина {m.PlateIndex + 1} -> {dir}{countStr}");
+                sb.AppendLine($"{(i + 1).ToString().PadLeft(2)}. {plateLabel} {m.PlateIndex + 1} -> {dir}{countStr}");
             }
 
             return sb.ToString();

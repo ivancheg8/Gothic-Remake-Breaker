@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -117,4 +117,110 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="FormText" xml:space="preserve">
+    <value>Gothic Remake Breaker</value>
+  </data>
+  <data name="labelPlateCount" xml:space="preserve">
+    <value>Number of plates:</value>
+  </data>
+  <data name="labelStartPositions" xml:space="preserve">
+    <value>Starting position for each plate:</value>
+  </data>
+  <data name="buttonSolve" xml:space="preserve">
+    <value>Solve</value>
+  </data>
+  <data name="buttonClear" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="groupBoxDelaySettingsText" xml:space="preserve">
+    <value>Delay Settings (ms)</value>
+  </data>
+  <data name="labelPlateSwitchDelay" xml:space="preserve">
+    <value>Plate switch delay (W/S):</value>
+  </data>
+  <data name="labelMoveDelay" xml:space="preserve">
+    <value>Plate move delay (A/D):</value>
+  </data>
+  <data name="labelRdelay" xml:space="preserve">
+    <value>Post-press delay</value>
+  </data>
+  <data name="checkBoxResetText" xml:space="preserve">
+    <value>Press "Reset" (R)</value>
+  </data>
+  <data name="_chkEnableHotkeyText" xml:space="preserve">
+    <value>Tracking F4 key presses</value>
+  </data>
+  <data name="checkBoxOntopText" xml:space="preserve">
+    <value>On top of all windows</value>
+  </data>
+  <data name="label1" xml:space="preserve">
+    <value>left checkboxes = opposite movement, right checkboxes = same movement</value>
+  </data>
+  <data name="label2" xml:space="preserve">
+    <value>Effects:</value>
+  </data>
+  <data name="languageText" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="comboBoxLanguageItems" xml:space="preserve">
+    <value>EN
+RU</value>
+  </data>
+  <data name="hotkeyRegisterError" xml:space="preserve">
+    <value>Failed to register global hotkey F4.
+Error code: {0}
+
+F4 may already be in use by another program.</value>
+  </data>
+  <data name="hotkeyRegisterErrorTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="firstSolveWarning" xml:space="preserve">
+    <value>Solve the lock first!</value>
+  </data>
+  <data name="autoPlayTitle" xml:space="preserve">
+    <value>Auto-play</value>
+  </data>
+  <data name="noMovesWarning" xml:space="preserve">
+    <value>Could not recognize moves in the result.</value>
+  </data>
+  <data name="errorTitle" xml:space="preserve">
+    <value>Error</value>
+  </data>
+  <data name="solveErrorPrefix" xml:space="preserve">
+    <value>Error while solving:</value>
+  </data>
+  <data name="autoPlayErrorPrefix" xml:space="preserve">
+    <value>Error starting auto-play:</value>
+  </data>
+  <data name="alreadyOpen" xml:space="preserve">
+    <value>Lock already open</value>
+  </data>
+  <data name="alreadyOpenSuffix" xml:space="preserve">
+    <value>(all plates in center).</value>
+  </data>
+  <data name="solvedXMoves" xml:space="preserve">
+    <value>Solved in {0} moves.</value>
+  </data>
+  <data name="timeoutError" xml:space="preserve">
+    <value>Timeout exceeded.</value>
+  </data>
+  <data name="noSolutionError" xml:space="preserve">
+    <value>No solution found.</value>
+  </data>
+  <data name="solutionErrorPrefix" xml:space="preserve">
+    <value>Error:</value>
+  </data>
+  <data name="plateMoveLeft" xml:space="preserve">
+    <value>Left</value>
+  </data>
+  <data name="plateMoveRight" xml:space="preserve">
+    <value>Right</value>
+  </data>
+  <data name="resultPrefix" xml:space="preserve">
+    <value>Result</value>
+  </data>
+  <data name="plateLabelFormat" xml:space="preserve">
+    <value>Plate {0}</value>
+  </data>
 </root>
